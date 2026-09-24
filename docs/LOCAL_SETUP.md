@@ -3,6 +3,53 @@
 How to get the app running on a Windows touchscreen laptop (and, optionally, the two external
 32" screens).
 
+## Tech stack
+
+A browser-only front-end app: no backend, database or cloud service. Everything runs locally.
+
+### Runtime libraries
+
+| Technology | Version | What it does here |
+|---|---|---|
+| [React](https://react.dev) | 19.3 | UI components: menu, submenus, image cards, display window. |
+| [TypeScript](https://www.typescriptlang.org) | 5.8 | Typed JavaScript; catches mistakes at build time (`strict` mode). |
+| [Framer Motion](https://motion.dev) | 12.43 | All animation: reveal, bounce, springs, ripples, ring rotation, card fly-off. |
+| [Zustand](https://zustand.docs.pmnd.rs) | 5.0 | Small global state store (menu position, submenu, images, ring step, linked screens). |
+
+### Tooling
+
+| Technology | Version | What it does here |
+|---|---|---|
+| [Vite](https://vite.dev) | 7.3 | Dev server with instant reload (`npm run dev`) and production build. |
+| [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) | 4.7 | React/JSX support and fast refresh for Vite. |
+| [Vitest](https://vitest.dev) | 3.2 | Unit tests for the geometry, placement, store, throw and spin logic. |
+| Node.js + npm | 20.19+ / 22.12+ | Runs the tooling and installs packages. |
+
+### Browser platform APIs (no extra packages)
+
+| API | What it does here |
+|---|---|
+| Pointer Events | One code path for touch, pen and mouse: taps, drags, multi-touch, flick speed. |
+| CSS (custom properties, `color-mix`, `touch-action`) | Glass/glow styling, theme tokens, and blocking browser gestures like pinch-zoom. |
+| Inline SVG | Icons, liquid connectors, and the generated placeholder images (works offline). |
+| BroadcastChannel | Messages between the laptop controller and the display windows on other screens. |
+| Window Management API (`getScreenDetails`) | Finds the external screens and opens a display window on each (Chrome/Edge). |
+| Fullscreen API | Shows the display windows and thrown images full screen. |
+
+### How the code is organised
+
+| Folder | Contents |
+|---|---|
+| `src/app` | Controller entry: background taps, resize handling, layers. |
+| `src/components` | Menu, submenu, ripples, image cards, screen badges, "Open screens" button. |
+| `src/display` | The display window shown on an external screen (`?view=display`). |
+| `src/displays` | Controller ↔ display link, opening screens, throw maths. |
+| `src/hooks` | Tap-vs-drag recognizer, clock ticks, idle timer, viewport size. |
+| `src/store` | Zustand store. |
+| `src/utils` | Pure geometry: radial layout, clamping, submenu/card placement, spin maths. |
+| `src/tests` | Vitest unit tests. |
+| `docs` | Spec, build prompt and this setup guide. |
+
 ## 1. Prerequisites
 
 | Tool | Version | Check |
