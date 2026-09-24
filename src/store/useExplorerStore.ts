@@ -3,8 +3,8 @@ import type { Point } from '../utils/radialGeometry';
 import type { SubMenuPlacement } from '../utils/subMenuPlacement';
 
 export type InteractionMode = 'idle' | 'pressing' | 'dragging';
-/** Visual lifecycle of the main menu. 'bouncing' = pre-interaction attract loop. */
-export type MotionPhase = 'hidden' | 'revealing' | 'bouncing' | 'idle' | 'moving';
+/** Visual lifecycle of the main menu. 'wandering' = pre-interaction drift across the window. */
+export type MotionPhase = 'hidden' | 'revealing' | 'wandering' | 'idle' | 'moving';
 /** How a new menu position is applied: instantly (drag/resize) or with the attract spring (tap). */
 export type MoveKind = 'jump' | 'spring';
 
@@ -120,7 +120,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
     set((s) =>
       s.hasInteracted
         ? s
-        : { hasInteracted: true, motionPhase: s.motionPhase === 'bouncing' ? 'idle' : s.motionPhase },
+        : { hasInteracted: true, motionPhase: s.motionPhase === 'wandering' ? 'idle' : s.motionPhase },
     ),
   openSubMenu: (activeMainItemId, subMenu) =>
     set((s) => ({

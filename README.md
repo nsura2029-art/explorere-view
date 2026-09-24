@@ -18,8 +18,10 @@ Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Poin
 
 ## Behaviour
 
-- **Load:** the menu materializes near the center, then bounces in place like a ball (squash on
-  landing, contact shadow) until the first touch. After that it only "breathes".
+- **Load:** the menu fades in at the bottom-left corner and drifts slowly toward the top right,
+  then keeps roaming to random spots across the window on smooth curves (never leaving the screen)
+  until the first touch. The first touch stops it where it is (or glides it fully into view if it
+  was still coming in); after that it only "breathes".
 - **Tap empty space:** a water ripple appears at the exact touch point and the menu glides there
   (clamped so it never leaves the screen). Extra simultaneous fingers only ripple.
 - **Drag** the hub, an item or the ring with one finger (10 px threshold) to move the menu; a drag never
@@ -108,12 +110,13 @@ src/
 ```
 
 Menu motion is layered: **anchor** (x/y motion values, no re-render on move) → **reveal** (one-shot)
-→ **bounce** (until first touch, `motionPhase === 'bouncing'`) → **move scale** (compress before a
+(the anchor is driven by the **drift** until first touch, `motionPhase === 'wandering'`,
+`utils/wander.ts`) → **move scale** (compress before a
 tap-move, pop on arrival) → **breath** (idle loop, only while `motionPhase === 'idle'`) → **rotor**
 (item ring only, clock ticks from `ringStep`; items counter-rotate).
 
-Note: the spec (3.1) asked for no cartoon bounce; the continuous bouncing-ball intro was added
-per stakeholder feedback and replaces the calm idle state only until the first interaction.
+Note: the spec (3.1) asks for the menu to appear near the center; per stakeholder feedback it
+instead drifts in from the bottom-left and roams the window until the first interaction.
 
 ## Known limitations
 

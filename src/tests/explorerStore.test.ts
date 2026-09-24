@@ -64,9 +64,9 @@ describe('explorer store', () => {
     expect(imgs[0]).toMatchObject({ id, detached: true, tether: null });
   });
 
-  it('first interaction ends the bounce loop', () => {
+  it('first interaction ends the wander drift', () => {
     const s = useExplorerStore.getState();
-    s.setMotionPhase('bouncing');
+    s.setMotionPhase('wandering');
     s.markInteracted();
     expect(useExplorerStore.getState()).toMatchObject({ hasInteracted: true, motionPhase: 'idle' });
   });

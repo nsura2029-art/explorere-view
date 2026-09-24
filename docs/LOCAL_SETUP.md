@@ -13,7 +13,7 @@ A browser-only front-end app: no backend, database or cloud service. Everything 
 |---|---|---|
 | [React](https://react.dev) | 19.3 | UI components: menu, submenus, image cards, display window. |
 | [TypeScript](https://www.typescriptlang.org) | 5.8 | Typed JavaScript; catches mistakes at build time (`strict` mode). |
-| [Framer Motion](https://motion.dev) | 12.43 | All animation: reveal, bounce, springs, ripples, ring rotation, card fly-off. |
+| [Framer Motion](https://motion.dev) | 12.43 | All animation: reveal, drifting intro, springs, ripples, ring rotation, card fly-off. |
 | [Zustand](https://zustand.docs.pmnd.rs) | 5.0 | Small global state store (menu position, submenu, images, ring step, linked screens). |
 
 ### Tooling
@@ -46,7 +46,7 @@ A browser-only front-end app: no backend, database or cloud service. Everything 
 | `src/displays` | Controller ↔ display link, opening screens, throw maths. |
 | `src/hooks` | Tap-vs-drag recognizer, clock ticks, idle timer, viewport size. |
 | `src/store` | Zustand store. |
-| `src/utils` | Pure geometry: radial layout, clamping, submenu/card placement, spin maths. |
+| `src/utils` | Pure geometry: radial layout, clamping, submenu/card placement, spin maths, intro drift. |
 | `src/tests` | Vitest unit tests. |
 | `docs` | Spec, build prompt and this setup guide. |
 
@@ -126,6 +126,7 @@ controller finds them by itself; the top-right button shows how many screens are
 
 | Gesture | Result |
 |---|---|
+| (page load) | the menu drifts in from the bottom-left and roams the window until you touch |
 | Tap empty space | ripple + the menu glides there |
 | Drag hub / item / ring | move the menu |
 | Tap an item | open its submenu (tap again to close) |

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from 'react';
 import {
   animate,
   AnimatePresence,
   motion,
+  useAnimationFrame,
   useMotionValue,
   useReducedMotion,
   useTransform,
@@ -14,7 +15,7 @@ import { useIdle } from '../hooks/useIdle';
 import { usePointerDrag } from '../hooks/usePointerDrag';
 import { useExplorerStore } from '../store/useExplorerStore';
 import { attachedCardCenter, cardSize } from '../utils/cardPlacement';
-import { clamp, clampMenuPosition, type Viewport } from '../utils/clampPosition';
+import { clampMenuPosition, type Viewport } from '../utils/clampPosition';
 import { EDGE_MARGIN, type MenuLayout } from '../utils/menuLayout';
 import { getRadialPositions, type Point } from '../utils/radialGeometry';
 import { SCENE_ASPECT } from '../utils/sceneImage';
@@ -27,6 +28,7 @@ import {
   type AngleSample,
 } from '../utils/spinMath';
 import { computeSubMenuPlacement } from '../utils/subMenuPlacement';
+import { initialWander, safeBounds, wanderSpeed, wanderStep, type WanderState } from '../utils/wander';
 import { MainMenuItem } from './MainMenuItem';
 import { MenuConnectorRing } from './MenuConnectorRing';
 import { SubRadialMenu } from './SubRadialMenu';
@@ -35,9 +37,6 @@ import { SubRadialMenu } from './SubRadialMenu';
 export const REVEAL_DELAY_S = 0.42;
 /** Idle breathing period (spec: 2.8–3.6 s). */
 const BREATH_S = 3.2;
-/** One full bounce (ground → apex → ground) of the pre-interaction attract loop. */
-const BOUNCE_S = 1.1;
-const MAX_BOUNCE = 90;
 
 /** "Attracted to touch" move: near-critically damped so it never overshoots into an edge. */
 const MOVE_SPRING: Transition = { type: 'spring', stiffness: 260, damping: 30, mass: 1, restDelta: 0.5 };
@@ -60,23 +59,6 @@ const REVEAL_REDUCED = {
   transition: { delay: REVEAL_DELAY_S, duration: 0.25, ease: 'easeOut' } satisfies Transition,
 };
 
-// Bouncing ball: squash on contact, stretch leaving/arriving, parabolic flight between.
-const BOUNCE_TIMES = [0, 0.07, 0.5, 0.93, 1];
-const bounceTransition = (ease: Transition['ease']): Transition => ({
-  duration: BOUNCE_S,
-  times: BOUNCE_TIMES,
-  ease,
-  repeat: Infinity,
-});
-const BOUNCE_TRANSITION: Record<string, Transition> = {
-  // ease-out-quad rising, ease-in-quad falling ≈ gravity.
-  y: bounceTransition(['linear', [0.5, 1, 0.89, 1], [0.11, 0, 0.5, 0], 'linear']),
-  scaleX: bounceTransition('easeOut'),
-  scaleY: bounceTransition('easeOut'),
-  opacity: bounceTransition('easeInOut'),
-  scale: bounceTransition('easeInOut'),
-};
-const SETTLE: Transition = { type: 'spring', stiffness: 320, damping: 26 };
 /** One slot of the ring, in degrees. */
 const SLOT_DEG = 360 / MAIN_MENU_ITEMS.length;
 /** Seconds-hand snap: fast, with a small overshoot that settles. */
@@ -122,6 +104,50 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   const latest = useRef({ layout, viewport, reduceMotion });
   latest.current = { layout, viewport, reduceMotion };
 
+  // --- pre-interaction drift: in from the bottom-left, then roaming the window until the first touch ---
+  const wander = useRef<WanderState | null>(null);
+  const wanderBounds = () => {
+    const { layout: l, viewport: vp } = latest.current;
+    return safeBounds(vp.width, vp.height, l.extent + EDGE_MARGIN);
+  };
+  // Before first paint: start just off the bottom-left corner (the reveal fades it in from there).
+  useLayoutEffect(() => {
+    const s = useExplorerStore.getState();
+    if (latest.current.reduceMotion || s.hasInteracted || s.motionPhase !== 'hidden') return;
+    const vp = latest.current.viewport;
+    wander.current = initialWander(wanderBounds(), latest.current.layout.extent, wanderSpeed(vp.width, vp.height));
+    x.set(wander.current.pos.x);
+    y.set(wander.current.pos.y);
+    s.setMotionPhase('wandering');
+  }, []);
+
+  useAnimationFrame((_time, delta) => {
+    const w = wander.current;
+    if (!w || useExplorerStore.getState().motionPhase !== 'wandering') return;
+    const vp = latest.current.viewport;
+    // Cap the step so a background tab / hiccup never makes it jump.
+    const next = wanderStep(w, Math.min(delta, 50) / 1000, wanderBounds(), wanderSpeed(vp.width, vp.height));
+    wander.current = next;
+    x.set(next.pos.x);
+    y.set(next.pos.y);
+  });
+
+  // The first touch ends the drift: hand the menu's live position to the store (synchronously, so
+  // a tap handled right after — relocate, submenu placement — starts from where the menu really is).
+  useEffect(
+    () =>
+      useExplorerStore.subscribe((s, prev) => {
+        if (prev.motionPhase !== 'wandering' || s.motionPhase === 'wandering') return;
+        wander.current = null;
+        const { layout: l, viewport: vp } = latest.current;
+        const here = { x: x.get(), y: y.get() };
+        const safe = clampMenuPosition({ desiredPosition: here, viewport: vp, menuRadius: l.extent, margin: EDGE_MARGIN });
+        // Still partly off-screen (touched while coming in): glide fully into view.
+        s.setMenuPosition(safe, safe.x === here.x && safe.y === here.y ? 'jump' : 'spring');
+      }),
+    [x, y],
+  );
+
   const stopMove = useCallback(() => {
     moveToken.current++;
     x.stop();
@@ -132,8 +158,10 @@ export function MainRadialMenu({ layout, viewport }: Props) {
 
   // Apply every committed position: instant for drag/resize, attract spring for taps.
   useEffect(() => {
-    const { menuPosition: p, moveKind } = useExplorerStore.getState();
+    const { menuPosition: p, moveKind, motionPhase: phase } = useExplorerStore.getState();
     if (!p) return;
+    // While drifting, the drift owns the position (store placement/resizes are ignored).
+    if (phase === 'wandering') return;
     if (moveKind === 'jump') {
       stopMove();
       x.set(p.x);
@@ -185,7 +213,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     idle &&
     !reduceMotion &&
     !spinMode &&
-    (motionPhase === 'idle' || motionPhase === 'bouncing') &&
+    (motionPhase === 'idle' || motionPhase === 'wandering') &&
     activeMainItemId === null &&
     interactionMode === 'idle';
   useClockTicks(ticking, useExplorerStore.getState().stepRing);
@@ -397,13 +425,10 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   });
 
   const reveal = reduceMotion ? REVEAL_REDUCED : REVEAL_FULL;
-  const bouncing = motionPhase === 'bouncing' && !reduceMotion;
   const breathing = motionPhase === 'idle' && interactionMode !== 'dragging' && !reduceMotion;
   const breathTransition: Transition = breathing
     ? { duration: BREATH_S, ease: 'easeInOut', repeat: Infinity }
     : { duration: 0.3, ease: 'easeOut' };
-  // Bounce as high as the space above allows, so the menu never leaves the screen.
-  const bounceH = clamp(menuPosition.y - extent - EDGE_MARGIN + 14, 12, Math.min(MAX_BOUNCE, extent * 0.45));
   const shellR = ringRadius + nodeSize / 2;
   const activeItem = MAIN_MENU_ITEMS.find((m) => m.id === activeMainItemId);
 
@@ -440,15 +465,6 @@ export function MainRadialMenu({ layout, viewport }: Props) {
           } as CSSProperties
         }
       >
-        {/* contact shadow for the bounce */}
-        <motion.div
-          className="menu-shadow"
-          style={{ left: center.x - shellR * 0.7, top: center.y + shellR - 4, width: shellR * 1.4 }}
-          initial={{ opacity: 0 }}
-          animate={bouncing ? { opacity: [0.8, 0.65, 0.2, 0.65, 0.8], scale: [1.08, 0.95, 0.5, 0.95, 1.08] } : { opacity: 0, scale: 1 }}
-          transition={bouncing ? BOUNCE_TRANSITION : { duration: 0.3 }}
-        />
-
         {/* Layer 1: one-shot materialize */}
         <motion.div
           className="menu-layer"
@@ -461,112 +477,97 @@ export function MainRadialMenu({ layout, viewport }: Props) {
           onAnimationComplete={() => {
             const s = useExplorerStore.getState();
             if (s.motionPhase !== 'revealing') return;
-            setMotionPhase(s.hasInteracted ? 'idle' : 'bouncing');
+            setMotionPhase('idle');
           }}
         >
-          {/* Layer 2: bouncing-ball attract loop until the first touch */}
-          <motion.div
-            className="menu-layer menu-layer--bounce"
-            animate={
-              bouncing
-                ? {
-                    y: [0, -bounceH * 0.26, -bounceH, -bounceH * 0.26, 0],
-                    scaleX: [1.07, 0.97, 1, 0.97, 1.07],
-                    scaleY: [0.92, 1.04, 1, 1.04, 0.92],
-                  }
-                : { y: 0, scaleX: 1, scaleY: 1 }
-            }
-            transition={bouncing ? BOUNCE_TRANSITION : SETTLE}
-          >
-            {/* Layer 3: touch-move compress / arrival pop */}
-            <motion.div className="menu-layer" style={{ scale: moveScale }}>
-              {/* Layer 4: idle breathing (stops cleanly whenever phase leaves 'idle') */}
+          {/* Layer 2: touch-move compress / arrival pop */}
+          <motion.div className="menu-layer" style={{ scale: moveScale }}>
+            {/* Layer 3: idle breathing (stops cleanly whenever phase leaves 'idle') */}
+            <motion.div
+              className="menu-layer"
+              animate={breathing ? { scale: [1, 1.015, 1] } : { scale: 1 }}
+              transition={breathTransition}
+            >
               <motion.div
-                className="menu-layer"
-                animate={breathing ? { scale: [1, 1.015, 1] } : { scale: 1 }}
+                className="menu-halo"
+                animate={breathing ? { opacity: [0.55, 0.95, 0.55] } : { opacity: 0.7 }}
                 transition={breathTransition}
-              >
-                <motion.div
-                  className="menu-halo"
-                  animate={breathing ? { opacity: [0.55, 0.95, 0.55] } : { opacity: 0.7 }}
-                  transition={breathTransition}
+              />
+              {/* Layer 4: the item ring ticks round like a seconds hand; the hub stays still. */}
+              <motion.div className="menu-layer menu-rotor" style={{ rotate: ringAngle }}>
+                <div
+                  className="menu-shell"
+                  data-role="main-shell"
+                  style={{ left: center.x - shellR, top: center.y - shellR, width: shellR * 2, height: shellR * 2 }}
                 />
-                {/* Layer 5: the item ring ticks round like a seconds hand; the hub stays still. */}
-                <motion.div className="menu-layer menu-rotor" style={{ rotate: ringAngle }}>
-                  <div
-                    className="menu-shell"
-                    data-role="main-shell"
-                    style={{ left: center.x - shellR, top: center.y - shellR, width: shellR * 2, height: shellR * 2 }}
+                <MenuConnectorRing
+                  layer="under"
+                  size={stage}
+                  center={center}
+                  nodes={nodes}
+                  tones={tones}
+                  nodeSize={nodeSize}
+                  hubSize={hubSize}
+                  ringRadius={ringRadius}
+                />
+                {MAIN_MENU_ITEMS.map((item, i) => (
+                  <MainMenuItem
+                    key={item.id}
+                    item={item}
+                    x={nodes[i].x}
+                    y={nodes[i].y}
+                    size={nodeSize}
+                    isActive={activeMainItemId === item.id}
+                    counterRotate={counterAngle}
+                    onKeyboardActivate={toggleItem}
                   />
-                  <MenuConnectorRing
-                    layer="under"
-                    size={stage}
-                    center={center}
-                    nodes={nodes}
-                    tones={tones}
-                    nodeSize={nodeSize}
-                    hubSize={hubSize}
-                    ringRadius={ringRadius}
-                  />
-                  {MAIN_MENU_ITEMS.map((item, i) => (
-                    <MainMenuItem
-                      key={item.id}
-                      item={item}
-                      x={nodes[i].x}
-                      y={nodes[i].y}
-                      size={nodeSize}
-                      isActive={activeMainItemId === item.id}
-                      counterRotate={counterAngle}
-                      onKeyboardActivate={toggleItem}
-                    />
-                  ))}
-                  <MenuConnectorRing
-                    layer="over"
-                    size={stage}
-                    center={center}
-                    nodes={nodes}
-                    tones={tones}
-                    nodeSize={nodeSize}
-                    hubSize={hubSize}
-                    ringRadius={ringRadius}
-                  />
-                </motion.div>
+                ))}
+                <MenuConnectorRing
+                  layer="over"
+                  size={stage}
+                  center={center}
+                  nodes={nodes}
+                  tones={tones}
+                  nodeSize={nodeSize}
+                  hubSize={hubSize}
+                  ringRadius={ringRadius}
+                />
+              </motion.div>
 
-                <motion.div
-                  className="orb orb--hub"
-                  data-role="main-hub"
-                  style={{ left: center.x - hubSize / 2, top: center.y - hubSize / 2, width: hubSize, height: hubSize }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={{ type: 'spring', stiffness: 520, damping: 28 }}
-                >
-                  {spinMode ? (
-                    <>
-                      <svg
-                        className="hub__spin-icon"
-                        width={Math.round(hubSize * 0.2)}
-                        height={Math.round(hubSize * 0.2)}
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <span className="hub__label hub__label--spin">ROTATE</span>
-                      <span className="hub__hint">drag to turn</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="hub__label">MENU</span>
-                      <span className="hub__rule" />
-                    </>
-                  )}
-                </motion.div>
+              <motion.div
+                className="orb orb--hub"
+                data-role="main-hub"
+                style={{ left: center.x - hubSize / 2, top: center.y - hubSize / 2, width: hubSize, height: hubSize }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 520, damping: 28 }}
+              >
+                {spinMode ? (
+                  <>
+                    <svg
+                      className="hub__spin-icon"
+                      width={Math.round(hubSize * 0.2)}
+                      height={Math.round(hubSize * 0.2)}
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span className="hub__label hub__label--spin">ROTATE</span>
+                    <span className="hub__hint">drag to turn</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hub__label">MENU</span>
+                    <span className="hub__rule" />
+                  </>
+                )}
               </motion.div>
             </motion.div>
           </motion.div>
