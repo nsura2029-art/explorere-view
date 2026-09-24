@@ -1,0 +1,38 @@
+:root {
+  --bg: #060817;
+  --bg-2: #0a0f2a;
+  --blue-1: #0b4dff;
+  --blue-2: #00b7ff;
+  --purple-1: #6d28d9;
+  --purple-2: #9b5cff;
+  --magenta-1: #d100d1;
+  --magenta-2: #ff2fb3;
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.7);
+
+  --font-ui: 'Sora', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Per-node tone palettes (glass orbs) */
+.tone-blue {
+  --c-deep: #071457;
+  --c-mid: #1a4fe0;
+  --c-edge: #3f9bff;
+  --rim: #63a8ff;
+  --glow: rgba(35, 115, 255, 0.62);
+}
+.tone-purple {
+  --c-deep: #1f0a5a;
+  --c-mid: #5b27d2;
+  --c-edge: #a06cff;
+  --rim: #b996ff;
+  --glow: rgba(140, 75, 255, 0.62);
+}
+.tone-magenta {
+  --c-deep: #430a4e;
+  --c-mid: #b11aa6;
+  --c-edge: #ff52c9;
+  --rim: #ff86de;
+  --glow: rgba(255, 45, 190, 0.62);
+}
