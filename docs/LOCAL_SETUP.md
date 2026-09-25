@@ -44,7 +44,7 @@ A browser-only front-end app: no backend, database or cloud service. Everything 
 | `src/components` | Menu, submenu, ripples, image cards, screen badges, "Open screens" button. |
 | `src/display` | The display window shown on an external screen (`?view=display`). |
 | `src/displays` | Controller ↔ display link, opening screens, throw maths. |
-| `src/hooks` | Tap-vs-drag recognizer, clock ticks, idle timer, viewport size. |
+| `src/hooks` | Tap-vs-drag recognizer, double tap, ring spin (rotate mode), clock ticks, idle timer, viewport size. |
 | `src/store` | Zustand store. |
 | `src/utils` | Pure geometry: radial layout, clamping, submenu/card placement, spin maths, intro drift. |
 | `src/tests` | Vitest unit tests. |
@@ -131,8 +131,11 @@ controller finds them by itself; the top-right button shows how many screens are
 | Drag hub / item / ring | move the menu |
 | Tap an item | open its submenu (tap again to close) |
 | Double-tap an item | rotate mode: drag around the menu to turn the ring (either direction) |
+| Double-tap a sub item | submenu rotate mode: drag around the submenu to turn its ring |
 | Tap a sub item | show its image (tap again to hide) |
 | Drag an image | detach it and place it anywhere |
+| Pinch an image (two fingers) | zoom it in / out |
+| Double-tap an image | zoom in to 2× / back to normal size |
 | Flick an image toward a screen | send it to that screen, full screen |
 | No touch for 15 s | the ring ticks round like a clock |
 

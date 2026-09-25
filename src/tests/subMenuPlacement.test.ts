@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { clampMenuPosition } from '../utils/clampPosition';
 import { computeMenuLayout, EDGE_MARGIN } from '../utils/menuLayout';
 import { distance, getRadialPositions, type Point } from '../utils/radialGeometry';
-import { computeSubMenuPlacement } from '../utils/subMenuPlacement';
+import { computeSubMenuPlacement, ORBIT_GAP } from '../utils/subMenuPlacement';
+import { outerOrbitRadius } from '../utils/menuLayout';
 
 const ITEMS = 8;
 const SUBS = 5;
@@ -111,4 +112,37 @@ describe('computeSubMenuPlacement', () => {
     expect(ticked.center.x).toBeCloseTo(plain.center.x, 6);
     expect(ticked.center.y).toBeCloseTo(plain.center.y, 6);
   });
+
+  it.each(VIEWPORTS)('keeps the two outer circles apart, with a visible gap (%o)', (viewport) => {
+    const layout = computeMenuLayout(viewport);
+    const mainOrbit = outerOrbitRadius(layout.ringRadius, layout.nodeSize);
+    const subOrbit = outerOrbitRadius(layout.sub.ringRadius, layout.sub.nodeSize);
+    const gap = layout.nodeSize * ORBIT_GAP;
+    const spots = [
+      { x: viewport.width / 2, y: viewport.height / 2 },
+      { x: 0, y: 0 },
+      { x: viewport.width, y: 0 },
+      { x: 0, y: viewport.height },
+      { x: viewport.width, y: viewport.height },
+    ];
+    for (const raw of spots) {
+      const center = clampMenuPosition({ desiredPosition: raw, viewport, menuRadius: layout.extent, margin: EDGE_MARGIN });
+      for (const ringStep of [0, 1, 3]) {
+        for (let i = 0; i < ITEMS; i++) {
+          const p = computeSubMenuPlacement({
+            itemIndex: i,
+            itemCount: ITEMS,
+            subCount: SUBS,
+            layout,
+            menuCenter: center,
+            viewport,
+            margin: EDGE_MARGIN,
+            startAngle: -90 + ringStep * 45,
+          });
+          expect(Math.hypot(p.center.x, p.center.y)).toBeGreaterThanOrEqual(mainOrbit + subOrbit + gap - 1e-6);
+        }
+      }
+    }
+  });
 });
+

@@ -2,6 +2,16 @@ import { clamp, type Viewport } from './clampPosition';
 
 export const EDGE_MARGIN = 20;
 const GLOW_PAD = 14;
+/**
+ * The submenu is the main menu scaled down: same proportions (hub, items and the gap between
+ * them), just noticeably — not dramatically — smaller.
+ */
+export const SUB_SCALE = 0.84;
+/** Smallest submenu node, so sub items stay comfortable touch targets on small screens. */
+const MIN_SUB_NODE = 64;
+
+/** Radius of a menu's outer decorative circle (the outline drawn around its items). */
+export const outerOrbitRadius = (ringRadius: number, nodeSize: number) => ringRadius + (nodeSize / 2) * 1.18;
 
 export type MenuLayout = {
   ringRadius: number;
@@ -20,9 +30,9 @@ export function computeMenuLayout({ width, height }: Viewport): MenuLayout {
   const hubSize = Math.round(ringRadius * 0.98);
   const extent = Math.ceil(ringRadius + nodeSize / 2 + GLOW_PAD);
 
-  const subRing = Math.round(ringRadius * 0.62);
-  const subNode = Math.max(72, Math.round(nodeSize * 0.8));
-  const subHub = Math.round(subRing * 1.02);
+  const subRing = Math.round(ringRadius * SUB_SCALE);
+  const subNode = Math.max(MIN_SUB_NODE, Math.round(nodeSize * SUB_SCALE));
+  const subHub = Math.round(hubSize * SUB_SCALE);
   return {
     ringRadius,
     nodeSize,

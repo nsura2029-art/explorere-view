@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { attachedCardCenter, CARD_MARGIN, cardSize, clampCardCenter } from '../utils/cardPlacement';
+import {
+  attachedCardCenter,
+  CAPTION_H,
+  CARD_MARGIN,
+  cardHeightFor,
+  cardSize,
+  clampCardCenter,
+  clampCardWidth,
+  maxCardWidth,
+  MIN_CARD_WIDTH,
+} from '../utils/cardPlacement';
 
 const viewport = { width: 1536, height: 864 };
 
@@ -54,3 +64,24 @@ describe('attachedCardCenter', () => {
     expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(obstacles[0].r);
   });
 });
+
+describe('card zoom limits', () => {
+  const aspect = 420 / 640;
+  it('keeps the caption height fixed while the image scales', () => {
+    expect(cardHeightFor(400, aspect)).toBe(Math.round(400 * aspect) + CAPTION_H);
+    expect(cardHeightFor(800, aspect) - CAPTION_H).toBe(Math.round(800 * aspect));
+  });
+  it('never zooms smaller than the minimum', () => {
+    expect(clampCardWidth(20, viewport, aspect)).toBe(MIN_CARD_WIDTH);
+  });
+  it('never zooms bigger than the screen', () => {
+    const max = maxCardWidth(viewport, aspect);
+    expect(clampCardWidth(99999, viewport, aspect)).toBe(max);
+    expect(max).toBeLessThanOrEqual(viewport.width - CARD_MARGIN * 2);
+    expect(cardHeightFor(max, aspect)).toBeLessThanOrEqual(viewport.height - CARD_MARGIN * 2 + 1);
+  });
+  it('lets a card grow well past its default size on a laptop screen', () => {
+    expect(maxCardWidth(viewport, aspect)).toBeGreaterThan(cardSize(viewport, aspect).width * 2);
+  });
+});
+

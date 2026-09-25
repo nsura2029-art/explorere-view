@@ -38,9 +38,18 @@ Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Poin
 - **Tap a main item or sub item:** a soft water ripple in the item's colour spreads from its center.
 - **Tap a main item** (single tap; it waits 0.3 s to tell it from a double tap) to open its submenu; tap it again (or the hub, or empty space) to collapse it.
   If the submenu would not fit, it rotates around the item and, if needed, the menu glides just enough.
-- **Tap a sub item** to show its image, tethered to the item. Tap the sub item again to hide it.
+- **Submenu look:** a scaled-down twin of the main menu (~84% size, same hub-to-item spacing),
+  joined to its main item by a longer bridge. The two menus' outer circles never overlap (a clear
+  gap is always kept between them). Opening: the bridge grows out of the item, the
+  submenu glides out along it, then the sub items pop in one by one; closing plays it back.
+- **Double-tap a sub item → submenu rotate mode:** same as the main menu (drag around the submenu
+  to turn its ring either way, flick + snap). Leave it by double-tapping again, tapping the sub hub,
+  single-tapping a sub item (which then shows its image), closing the submenu, or 15 s idle.
+- **Tap a sub item** (single tap; waits 0.3 s like main items) to show its image, tethered to the
+  item. Tap the sub item again to hide it.
   **Drag the image** to detach it: it stays wherever you drop it (on top of everything, tap to bring
-  to front, × to close). Attached images close with their submenu; detached ones stay.
+  to front, × to close). **Pinch with two fingers** to zoom it in or out (it follows your fingers and
+  stays on screen), or **double-tap** it to zoom in to 2× / back to normal. Attached images close with their submenu; detached ones stay.
 
 ## External screens (throw to display)
 

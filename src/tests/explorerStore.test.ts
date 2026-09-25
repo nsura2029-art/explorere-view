@@ -89,4 +89,37 @@ describe('explorer store', () => {
     const z = Object.fromEntries(imgs.map((c) => [c.id, c.z]));
     expect(z[first]).toBeGreaterThan(Math.max(...imgs.filter((c) => c.id !== first).map((c) => c.z)));
   });
+
+  it('submenu rotate mode drops the attached image and resets with the submenu', () => {
+    const s = useExplorerStore.getState();
+    s.openSubMenu('item-1', placement);
+    s.toggleImage(card('a'));
+    const detachedId = useExplorerStore.getState().images[0].id;
+    s.detachImage(detachedId);
+    s.toggleImage(card('b'));
+    s.setSubRingStep(2);
+    s.setSubSpinMode(true);
+    let st = useExplorerStore.getState();
+    expect(st.subSpinMode).toBe(true);
+    expect(st.activeSubItemId).toBeNull();
+    expect(st.images.map((c) => c.id)).toEqual([detachedId]); // attached one closed, detached kept
+    s.openSubMenu('item-2', placement);
+    st = useExplorerStore.getState();
+    expect(st).toMatchObject({ subSpinMode: false, subRingStep: 0 });
+    s.setSubSpinMode(true);
+    s.setSubRingStep(-1);
+    s.closeSubMenu();
+    st = useExplorerStore.getState();
+    expect(st).toMatchObject({ subSpinMode: false, subRingStep: 0 });
+  });
+
+  it('resizes an image card (zoom)', () => {
+    const s = useExplorerStore.getState();
+    s.openSubMenu('item-1', placement);
+    s.toggleImage(card('a'));
+    const id = useExplorerStore.getState().images[0].id;
+    s.resizeImage(id, 300, 250, 500, 380);
+    expect(useExplorerStore.getState().images[0]).toMatchObject({ x: 300, y: 250, width: 500, height: 380 });
+  });
 });
+

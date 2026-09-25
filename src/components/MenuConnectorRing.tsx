@@ -1,5 +1,6 @@
 import { memo, useId } from 'react';
 import { TONE_COLORS, type Tone } from '../data/menuData';
+import { outerOrbitRadius } from '../utils/menuLayout';
 import { getBridgePath, pointOnRim, type Point } from '../utils/radialGeometry';
 
 type Props = {
@@ -87,7 +88,7 @@ function MenuConnectorRingBase({ size, center, nodes, tones, nodeSize, hubSize, 
       </defs>
 
       {/* orbit decorations */}
-      <circle className="orbit orbit--outer" cx={center.x} cy={center.y} r={ringRadius + r * 1.18} />
+      <circle className="orbit orbit--outer" cx={center.x} cy={center.y} r={outerOrbitRadius(ringRadius, nodeSize)} />
       <circle className="orbit orbit--faint" cx={center.x} cy={center.y} r={ringRadius + r * 1.02} />
       <circle className="orbit orbit--dotted" cx={center.x} cy={center.y} r={hubSize / 2 + 14} />
       <circle className="orbit orbit--inner" cx={center.x} cy={center.y} r={hubSize / 2 + 30} />

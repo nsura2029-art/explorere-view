@@ -2,13 +2,30 @@ import { clamp, type Viewport } from './clampPosition';
 import type { Point } from './radialGeometry';
 
 export const CARD_MARGIN = 12;
-const CAPTION_H = 52;
+/** Height of the title bar under the image; it keeps this size when the card is zoomed. */
+export const CAPTION_H = 52;
+/** Smallest a card can be pinched down to (px wide). */
+export const MIN_CARD_WIDTH = 160;
+
+/** Card height for a given width (image keeps the scene aspect, caption stays fixed). */
+export const cardHeightFor = (width: number, aspect: number) => Math.round(width * aspect) + CAPTION_H;
 
 /** Card size from the viewport's short side (image keeps the scene aspect). */
 export function cardSize(viewport: Viewport, aspect: number): { width: number; height: number } {
   const width = Math.round(clamp(Math.min(viewport.width, viewport.height) * 0.36, 200, 380));
-  return { width, height: Math.round(width * aspect) + CAPTION_H };
+  return { width, height: cardHeightFor(width, aspect) };
 }
+
+/** Widest a card can be zoomed to while staying fully on screen. */
+export function maxCardWidth(viewport: Viewport, aspect: number): number {
+  const byWidth = viewport.width - CARD_MARGIN * 2;
+  const byHeight = (viewport.height - CARD_MARGIN * 2 - CAPTION_H) / aspect;
+  return Math.max(MIN_CARD_WIDTH, Math.floor(Math.min(byWidth, byHeight)));
+}
+
+/** Clamps a zoomed card width between the minimum and what fits on screen. */
+export const clampCardWidth = (width: number, viewport: Viewport, aspect: number) =>
+  clamp(width, MIN_CARD_WIDTH, maxCardWidth(viewport, aspect));
 
 /** Nearest card center that keeps the whole card on screen. */
 export function clampCardCenter(p: Point, width: number, height: number, viewport: Viewport): Point {
@@ -29,7 +46,7 @@ function penetration(o: Obstacle, c: Point, width: number, height: number): numb
 /** Directions tried around the preferred one (degrees). */
 const OFFSETS = [0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180];
 /** Distances (px beyond the item rim) tried in each direction. */
-const GAPS = [22, 70, 130];
+const GAPS = [22, 70, 130, 200];
 
 /**
  * Center for a card attached to a sub item: just beyond the item, preferably along `dir`

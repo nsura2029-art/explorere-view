@@ -2,12 +2,13 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion } from 'framer-motion';
 import { pickThrowTarget } from '../displays/throwMath';
 import { controllerCenter, labelDisplays, postToDisplays, useDisplayStore } from '../displays/useDisplayLink';
+import { useDoubleTap } from '../hooks/useDoubleTap';
 import { usePointerDrag } from '../hooks/usePointerDrag';
 import { useViewport } from '../hooks/useViewport';
 import { useExplorerStore, type ImageCard as Card } from '../store/useExplorerStore';
-import { clampCardCenter } from '../utils/cardPlacement';
+import { cardHeightFor, cardSize, clampCardCenter, clampCardWidth } from '../utils/cardPlacement';
 import type { Point } from '../utils/radialGeometry';
-import { sceneImageUrl } from '../utils/sceneImage';
+import { SCENE_ASPECT, sceneImageUrl } from '../utils/sceneImage';
 
 function CloseButton({ onClose }: { onClose: () => void }) {
   const handlers = usePointerDrag({ onTap: onClose });
@@ -28,22 +29,44 @@ function CloseButton({ onClose }: { onClose: () => void }) {
   );
 }
 
+/** Double tap zooms a card in to this multiple of its default width (limited by the screen). */
+const ZOOM_IN = 2;
+const ZOOM_SPRING = { type: 'spring', stiffness: 260, damping: 28 } as const;
+
 /**
  * An image shown by a submenu item. Attached cards hang off their sub item; dragging one
- * detaches it so it stays wherever it is dropped, independent of the menu.
+ * detaches it so it stays wherever it is dropped, independent of the menu. Pinch with two
+ * fingers (or double-tap) to zoom it in and out.
  */
 function ImageCardBase({ card }: { card: Card }) {
   const reduceMotion = useReducedMotion() ?? false;
   const viewport = useViewport();
   const vpRef = useRef(viewport);
   vpRef.current = viewport;
-  const { width, height } = card;
-  // Top-left corner in motion values: dragging never re-renders.
-  const left = useMotionValue(card.x - width / 2);
-  const top = useMotionValue(card.y - height / 2);
+  // Position (top-left) and size in motion values: dragging and zooming never re-render.
+  const w = useMotionValue(card.width);
+  const h = useMotionValue(card.height);
+  const left = useMotionValue(card.x - card.width / 2);
+  const top = useMotionValue(card.y - card.height / 2);
   const [dragging, setDragging] = useState(false);
   const [thrown, setThrown] = useState(false);
   const origin = useRef<Point>({ x: 0, y: 0 });
+  const pinchBase = useRef({ w: card.width, cx: card.x, cy: card.y });
+  const doubleTap = useDoubleTap();
+
+  const center = () => ({ x: left.get() + w.get() / 2, y: top.get() + h.get() / 2 });
+  /** Places the card at `c` (clamped on screen) with width `width`. */
+  const place = (c: Point, width: number) => {
+    const vp = vpRef.current;
+    const cw = clampCardWidth(width, vp, SCENE_ASPECT);
+    const ch = cardHeightFor(cw, SCENE_ASPECT);
+    const p = clampCardCenter(c, cw, ch, vp);
+    return { x: p.x, y: p.y, width: cw, height: ch };
+  };
+  const commit = () => {
+    const c = center();
+    useExplorerStore.getState().resizeImage(card.id, c.x, c.y, w.get(), h.get());
+  };
 
   /** Flies the card off the edge toward the display, which takes over and shows it full screen. */
   const throwTo = (target: string, velocity: Point) => {
@@ -66,32 +89,55 @@ function ImageCardBase({ card }: { card: Card }) {
     animate(top, top.get() + dir.y * dist, t).then(() => useExplorerStore.getState().closeImage(card.id));
   };
 
+  /** Double tap: zoom in around the card's center, or back to the default size if already zoomed. */
+  const toggleZoom = () => {
+    const vp = vpRef.current;
+    const base = cardSize(vp, SCENE_ASPECT).width;
+    const zoomedIn = w.get() > base * 1.3;
+    const next = place(center(), zoomedIn ? base : base * ZOOM_IN);
+    useExplorerStore.getState().detachImage(card.id);
+    const t = reduceMotion ? { duration: 0 } : ZOOM_SPRING;
+    animate(w, next.width, t);
+    animate(h, next.height, t);
+    animate(left, next.x - next.width / 2, t);
+    animate(top, next.y - next.height / 2, t).then(commit);
+  };
+
+  // Follow store changes (resize clamping, commits).
   useEffect(() => {
-    left.set(card.x - width / 2);
-    top.set(card.y - height / 2);
-  }, [card.x, card.y, width, height, left, top]);
+    w.set(card.width);
+    h.set(card.height);
+    left.set(card.x - card.width / 2);
+    top.set(card.y - card.height / 2);
+  }, [card.x, card.y, card.width, card.height, w, h, left, top]);
 
   const handlers = usePointerDrag({
-    onPress: () => {
+    onPress: ({ start }) => {
       if (thrown) return false;
       useExplorerStore.getState().bringImageToFront(card.id);
+      if (doubleTap.isSecondTap('card', start)) toggleZoom();
+    },
+    onTap: ({ start }) => {
+      // Nothing happens on a single tap; this just arms the double tap.
+      doubleTap.deferSingle('card', start, () => {});
     },
     onDragStart: () => {
+      doubleTap.clear();
       useExplorerStore.getState().detachImage(card.id);
       useDisplayStore.getState().setCardDragging(true);
       setDragging(true);
       // Follow the finger 1:1 from the card's position when the press began.
-      origin.current = { x: left.get() + width / 2, y: top.get() + height / 2 };
+      origin.current = center();
     },
     onDragMove: (_info, delta) => {
       const c = clampCardCenter(
         { x: origin.current.x + delta.x, y: origin.current.y + delta.y },
-        width,
-        height,
+        w.get(),
+        h.get(),
         vpRef.current,
       );
-      left.set(c.x - width / 2);
-      top.set(c.y - height / 2);
+      left.set(c.x - w.get() / 2);
+      top.set(c.y - h.get() / 2);
     },
     onDragEnd: (_info, _delta, cancelled, velocity) => {
       // A fast flick toward a connected screen sends the card there; otherwise it's a normal drop.
@@ -103,8 +149,28 @@ function ImageCardBase({ card }: { card: Card }) {
           return;
         }
       }
-      useExplorerStore.getState().moveImage(card.id, left.get() + width / 2, top.get() + height / 2);
+      commit();
     },
+    // Two fingers: zoom around the fingers' midpoint and follow it.
+    onPinchStart: () => {
+      doubleTap.clear();
+      useExplorerStore.getState().detachImage(card.id);
+      useDisplayStore.getState().setCardDragging(false);
+      w.stop();
+      h.stop();
+      const c = center();
+      pinchBase.current = { w: w.get(), cx: c.x, cy: c.y };
+      setDragging(true);
+    },
+    onPinch: (scale, pan) => {
+      const b = pinchBase.current;
+      const next = place({ x: b.cx + pan.x, y: b.cy + pan.y }, b.w * scale);
+      w.set(next.width);
+      h.set(next.height);
+      left.set(next.x - next.width / 2);
+      top.set(next.y - next.height / 2);
+    },
+    onPinchEnd: commit,
     onRelease: () => {
       setDragging(false);
       useDisplayStore.getState().setCardDragging(false);
@@ -117,7 +183,7 @@ function ImageCardBase({ card }: { card: Card }) {
     <motion.div
       className={`image-card${card.detached ? ' is-detached' : ' is-attached'}${dragging ? ' is-dragging' : ''}${thrown ? ' is-thrown' : ''}`}
       data-role="image-card"
-      style={{ x: left, y: top, width, height, zIndex: card.z }}
+      style={{ x: left, y: top, width: w, height: h, zIndex: card.z }}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
       animate={{
         opacity: thrown ? 0.15 : 1,
@@ -133,7 +199,9 @@ function ImageCardBase({ card }: { card: Card }) {
       <div className="image-card__caption">
         <div className="image-card__text">
           <span className="image-card__title">{card.title}</span>
-          <span className="image-card__hint">{card.detached ? 'Drag to move' : 'Drag to detach'}</span>
+          <span className="image-card__hint">
+            {card.detached ? 'Drag to move · pinch to zoom' : 'Drag to detach · pinch to zoom'}
+          </span>
         </div>
         <CloseButton onClose={close} />
       </div>

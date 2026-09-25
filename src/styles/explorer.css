@@ -321,6 +321,12 @@ body {
 .menu-anchor.is-spinning.is-dragging .orb--item {
   cursor: grabbing;
 }
+.submenu.is-spinning .menu-shell,
+.submenu.is-spinning .orb--sub,
+.submenu.is-spinning .orb--subhub {
+  cursor: grab;
+}
+.submenu.is-spinning .orbit--outer,
 .menu-anchor.is-spinning .orbit--outer {
   stroke: rgba(255, 110, 215, 0.85);
   stroke-width: 2.4;
@@ -328,6 +334,7 @@ body {
   animation: energy 2.4s linear infinite;
   filter: drop-shadow(0 0 6px rgba(255, 60, 200, 0.8));
 }
+.submenu.is-spinning .orb--subhub,
 .menu-anchor.is-spinning .orb--hub {
   --rim: #ff86de;
   --glow: rgba(255, 60, 200, 0.55);
@@ -570,6 +577,9 @@ body {
 .image-card__hint {
   font-size: 11.5px;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .image-card__close {
   flex: 0 0 48px;

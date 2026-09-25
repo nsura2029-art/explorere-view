@@ -11,26 +11,21 @@ import {
 } from 'framer-motion';
 import { MAIN_MENU_ITEMS, TONE_COLORS, type SubMenuItem } from '../data/menuData';
 import { useClockTicks } from '../hooks/useClockTicks';
+import { useDoubleTap } from '../hooks/useDoubleTap';
 import { useIdle } from '../hooks/useIdle';
 import { usePointerDrag } from '../hooks/usePointerDrag';
+import { useRingSpin } from '../hooks/useRingSpin';
 import { useExplorerStore } from '../store/useExplorerStore';
 import { attachedCardCenter, cardSize } from '../utils/cardPlacement';
 import { clampMenuPosition, type Viewport } from '../utils/clampPosition';
 import { EDGE_MARGIN, type MenuLayout } from '../utils/menuLayout';
 import { getRadialPositions, type Point } from '../utils/radialGeometry';
 import { SCENE_ASPECT } from '../utils/sceneImage';
-import {
-  angleDelta,
-  angularVelocity,
-  DOUBLE_TAP_MS,
-  DOUBLE_TAP_SLOP,
-  spinSnapStep,
-  type AngleSample,
-} from '../utils/spinMath';
 import { computeSubMenuPlacement } from '../utils/subMenuPlacement';
 import { initialWander, safeBounds, wanderSpeed, wanderStep, type WanderState } from '../utils/wander';
 import { MainMenuItem } from './MainMenuItem';
 import { MenuConnectorRing } from './MenuConnectorRing';
+import { SpinHubLabel } from './SpinHubLabel';
 import { SubRadialMenu } from './SubRadialMenu';
 
 /** Delay before the menu materializes (spec: 300–500 ms). */
@@ -180,34 +175,25 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     });
   }, [moveSeq, x, y, moveScale, stopMove, setMotionPhase]);
 
-  // Transition for the next ring snap (a manual spin hands over its momentum); ticks by default.
-  const ringTransition = useRef<Transition | null>(null);
-  useEffect(() => {
-    const t = ringTransition.current ?? TICK_SPRING;
-    ringTransition.current = null;
-    animate(ringAngle, ringStep * SLOT_DEG, latest.current.reduceMotion ? { duration: 0 } : t);
-  }, [ringStep, ringAngle]);
-
-  /** Settles the ring on `step` (animates even when the step number itself is unchanged). */
-  const snapRing = useCallback(
-    (step: number, transition: Transition) => {
-      const s = useExplorerStore.getState();
-      if (step === s.ringStep) {
-        animate(ringAngle, step * SLOT_DEG, latest.current.reduceMotion ? { duration: 0 } : transition);
-      } else {
-        ringTransition.current = transition;
-        s.setRingStep(step);
-      }
-    },
-    [ringAngle],
-  );
+  // Clock ticks and manual spins both settle the ring through `ringStep`.
+  const ringSpin = useRingSpin({
+    angle: ringAngle,
+    slotDeg: SLOT_DEG,
+    step: ringStep,
+    setStep: useExplorerStore.getState().setRingStep,
+    reduceMotion,
+    settle: TICK_SPRING,
+  });
 
   // The clock ticking runs only after 15 s without any touch (and from load until the first touch),
   // and never with a submenu open, in rotate mode or under a finger, so submenus and image
   // tethers always line up with their item.
   const idle = useIdle();
   useEffect(() => {
-    if (idle && useExplorerStore.getState().spinMode) useExplorerStore.getState().setSpinMode(false);
+    if (!idle) return;
+    const s = useExplorerStore.getState();
+    s.setSpinMode(false);
+    s.setSubSpinMode(false);
   }, [idle]);
   const ticking =
     idle &&
@@ -273,11 +259,15 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     const dir = { x: (itemCenter.x - hubCenter.x) / len, y: (itemCenter.y - hubCenter.y) / len };
     const r = l.sub.nodeSize / 2;
     const { width, height } = cardSize(vp, SCENE_ASPECT);
-    // Keep the card off both menus when the preferred spot is pushed back by a screen edge.
-    const c = attachedCardCenter(itemCenter, dir, r, width, height, vp, [
+    // Keep the card off both menus (and the corner "Open screens" button) when the preferred
+    // spot is pushed back by a screen edge.
+    const obstacles = [
       { ...s.menuPosition, r: l.ringRadius + l.nodeSize / 2 },
       { ...hubCenter, r: l.sub.ringRadius + r },
-    ]);
+    ];
+    const btn = document.querySelector('.screens__btn')?.getBoundingClientRect();
+    if (btn) obstacles.push({ x: btn.left + btn.width / 2, y: btn.top + btn.height / 2, r: Math.max(btn.width, btn.height) / 2 + 8 });
+    const c = attachedCardCenter(itemCenter, dir, r, width, height, vp, obstacles);
     s.toggleImage({
       mainItemId: main.id,
       subItemId: sub.id,
@@ -297,17 +287,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   // Drag an item / the hub / the ring: move the menu (or turn the ring in rotate mode).
   const press = useRef<{ role: PressRole; itemId: string | null; spin: boolean } | null>(null);
   const dragOrigin = useRef<Point>({ x: 0, y: 0 });
-  const pendingTap = useRef<{ itemId: string; at: number; pos: Point; timer: number } | null>(null);
-  const spin = useRef<{ last: number; samples: AngleSample[] }>({ last: 0, samples: [] });
-
-  const clearPendingTap = () => {
-    if (pendingTap.current) window.clearTimeout(pendingTap.current.timer);
-    pendingTap.current = null;
-  };
-  useEffect(() => clearPendingTap, []);
-
-  /** Pointer angle around the menu center, degrees (screen space, clockwise positive). */
-  const pointerAngle = (p: Point) => (Math.atan2(p.y - y.get(), p.x - x.get()) * 180) / Math.PI;
+  const doubleTap = useDoubleTap();
 
   const handlers = usePointerDrag({
     onPress: ({ target, start }) => {
@@ -320,15 +300,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
       s.setInteractionMode('pressing');
 
       // Second tap on the same item soon after the first: toggle rotate mode.
-      const pend = pendingTap.current;
-      const isDouble =
-        role === 'main-item' &&
-        !!pend &&
-        pend.itemId === itemId &&
-        performance.now() - pend.at <= DOUBLE_TAP_MS &&
-        Math.hypot(start.x - pend.pos.x, start.y - pend.pos.y) <= DOUBLE_TAP_SLOP;
-      if (isDouble) {
-        clearPendingTap();
+      if (role === 'main-item' && doubleTap.isSecondTap(itemId, start)) {
         const on = !s.spinMode;
         s.setSpinMode(on);
         if (on) s.closeSubMenu();
@@ -344,35 +316,23 @@ export function MainRadialMenu({ layout, viewport }: Props) {
       if (p.role === 'main-item' && p.itemId) {
         const item = MAIN_MENU_ITEMS.find((m) => m.id === p.itemId);
         if (item) rippleFrom(target, '[data-role="main-item"]', latest.current.layout.nodeSize, TONE_COLORS[item.tone].soft);
-        clearPendingTap();
         const itemId = p.itemId;
-        pendingTap.current = {
-          itemId,
-          at: performance.now(),
-          pos: start,
-          timer: window.setTimeout(() => {
-            pendingTap.current = null;
-            useExplorerStore.getState().setSpinMode(false);
-            toggleItem(itemId);
-          }, DOUBLE_TAP_MS),
-        };
+        doubleTap.deferSingle(itemId, start, () => {
+          useExplorerStore.getState().setSpinMode(false);
+          toggleItem(itemId);
+        });
       } else {
-        clearPendingTap();
+        doubleTap.clear();
         s.setSpinMode(false);
         s.closeSubMenu();
       }
     },
     onDragStart: ({ start }, delta) => {
       const s = useExplorerStore.getState();
-      clearPendingTap();
+      doubleTap.clear();
       if (s.spinMode) {
         // Rotate mode: the finger turns the ring around the menu center.
-        ringAngle.stop();
-        const from = pointerAngle(start);
-        const now = pointerAngle({ x: start.x + delta.x, y: start.y + delta.y });
-        const next = ringAngle.get() + angleDelta(from, now);
-        ringAngle.set(next);
-        spin.current = { last: now, samples: [{ t: performance.now(), a: next }] };
+        ringSpin.begin({ x: x.get(), y: y.get() }, start, { x: start.x + delta.x, y: start.y + delta.y });
         s.setInteractionMode('dragging');
         return;
       }
@@ -385,16 +345,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     },
     onDragMove: ({ start }, delta) => {
       if (useExplorerStore.getState().spinMode) {
-        const p = { x: start.x + delta.x, y: start.y + delta.y };
-        // Near the center the angle is unstable; ignore those moves.
-        if (Math.hypot(p.x - x.get(), p.y - y.get()) < 24) return;
-        const a = pointerAngle(p);
-        const next = ringAngle.get() + angleDelta(spin.current.last, a);
-        spin.current.last = a;
-        ringAngle.set(next);
-        const samples = spin.current.samples;
-        samples.push({ t: performance.now(), a: next });
-        if (samples.length > 24) samples.shift();
+        ringSpin.move({ x: start.x + delta.x, y: start.y + delta.y });
         return;
       }
       const { layout: l, viewport: vp } = latest.current;
@@ -409,10 +360,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     },
     onDragEnd: (_info, _delta, cancelled) => {
       if (useExplorerStore.getState().spinMode) {
-        // Keep the flick's momentum, then settle on the nearest item slot.
-        const w = cancelled ? 0 : angularVelocity(spin.current.samples);
-        const step = spinSnapStep(ringAngle.get(), w, SLOT_DEG);
-        snapRing(step, { type: 'spring', stiffness: 140, damping: 20, velocity: w * 1000 });
+        ringSpin.end(cancelled);
         return;
       }
       useExplorerStore.getState().setMenuPosition({ x: x.get(), y: y.get() }, 'jump');
@@ -542,26 +490,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
                 transition={{ type: 'spring', stiffness: 520, damping: 28 }}
               >
                 {spinMode ? (
-                  <>
-                    <svg
-                      className="hub__spin-icon"
-                      width={Math.round(hubSize * 0.2)}
-                      height={Math.round(hubSize * 0.2)}
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <span className="hub__label hub__label--spin">ROTATE</span>
-                    <span className="hub__hint">drag to turn</span>
-                  </>
+                  <SpinHubLabel hubSize={hubSize} />
                 ) : (
                   <>
                     <span className="hub__label">MENU</span>

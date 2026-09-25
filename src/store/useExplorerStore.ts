@@ -62,6 +62,10 @@ type ExplorerState = {
   ringStep: number;
   /** Double-tapped an item: dragging the menu turns the ring instead of moving the menu. */
   spinMode: boolean;
+  /** Rotation of the open submenu's ring, in slots (reset whenever a submenu opens or closes). */
+  subRingStep: number;
+  /** Double-tapped a sub item: dragging the submenu turns its ring. */
+  subSpinMode: boolean;
   /** Date.now() of the last touch anywhere (0 = none yet); drives the 15 s idle auto-rotation. */
   lastActivityAt: number;
 
@@ -75,6 +79,8 @@ type ExplorerState = {
   removeRipple: (id: number) => void;
   toggleImage: (card: NewImageCard) => void;
   moveImage: (id: number, x: number, y: number) => void;
+  /** Zoom (pinch / double tap): new center and size. */
+  resizeImage: (id: number, x: number, y: number, width: number, height: number) => void;
   detachImage: (id: number) => void;
   bringImageToFront: (id: number) => void;
   closeImage: (id: number) => void;
@@ -82,6 +88,8 @@ type ExplorerState = {
   stepRing: (delta: number) => void;
   setRingStep: (step: number) => void;
   setSpinMode: (on: boolean) => void;
+  setSubRingStep: (step: number) => void;
+  setSubSpinMode: (on: boolean) => void;
   noteActivity: () => void;
 };
 
@@ -106,6 +114,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   images: [],
   ringStep: 0,
   spinMode: false,
+  subRingStep: 0,
+  subSpinMode: false,
   lastActivityAt: 0,
 
   setMenuPosition: (menuPosition, moveKind = 'jump') =>
@@ -128,6 +138,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       isSubMenuOpen: true,
       subMenu,
       activeSubItemId: null,
+      subRingStep: 0,
+      subSpinMode: false,
       images: s.images.filter((c) => c.detached),
     })),
   closeSubMenu: () =>
@@ -139,6 +151,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
             isSubMenuOpen: false,
             subMenu: null,
             activeSubItemId: null,
+            subRingStep: 0,
+            subSpinMode: false,
             images: s.images.filter((c) => c.detached),
           },
     ),
@@ -165,6 +179,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
     }),
   moveImage: (id, x, y) =>
     set((s) => ({ images: s.images.map((c) => (c.id === id ? { ...c, x, y } : c)) })),
+  resizeImage: (id, x, y, width, height) =>
+    set((s) => ({ images: s.images.map((c) => (c.id === id ? { ...c, x, y, width, height } : c)) })),
   detachImage: (id) =>
     set((s) => {
       const card = s.images.find((c) => c.id === id);
@@ -194,5 +210,15 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   stepRing: (delta) => set((s) => ({ ringStep: s.ringStep + delta })),
   setRingStep: (ringStep) => set({ ringStep }),
   setSpinMode: (spinMode) => set((s) => (s.spinMode === spinMode ? s : { spinMode })),
+  setSubRingStep: (subRingStep) => set({ subRingStep }),
+  // Turning the submenu would pull its sub items away from an attached image, so that closes first.
+  setSubSpinMode: (subSpinMode) =>
+    set((s) =>
+      s.subSpinMode === subSpinMode
+        ? s
+        : subSpinMode
+          ? { subSpinMode, activeSubItemId: null, images: s.images.filter((c) => c.detached) }
+          : { subSpinMode },
+    ),
   noteActivity: () => set({ lastActivityAt: Date.now() }),
 }));
