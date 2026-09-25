@@ -50,6 +50,11 @@ export function App() {
       s.setSpinMode(false);
       // Only a lone finger relocates; extra fingers and touches during a drag ripple only (spec 4.0).
       if (s.interactionMode === 'dragging' || activePointerCount() > 1 || !s.menuPosition) return;
+      // Split view: the menus stay docked in the left half; a tap outside just closes the submenu.
+      if (s.focusCardId !== null || s.images.some((c) => c.shelved)) {
+        s.closeSubMenu();
+        return;
+      }
       s.markInteracted();
       s.closeSubMenu();
       s.setMenuPosition(

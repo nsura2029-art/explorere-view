@@ -39,29 +39,33 @@ describe('explorer store', () => {
     expect(st.subMenu).toBeNull();
   });
 
-  it('toggles the attached image and replaces it for another sub item', () => {
+  it('a new image becomes active and the previous one goes to the tray; tapping again hides it', () => {
     const s = useExplorerStore.getState();
     s.openSubMenu('item-1', placement);
     s.toggleImage(card('a'));
     expect(useExplorerStore.getState().images).toHaveLength(1);
     s.toggleImage(card('b'));
-    expect(useExplorerStore.getState().images.map((c) => c.subItemId)).toEqual(['b']);
+    let imgs = useExplorerStore.getState().images;
+    expect(imgs.map((c) => [c.subItemId, c.shelved])).toEqual([
+      ['a', true],
+      ['b', false],
+    ]);
+    expect(imgs[0]).toMatchObject({ detached: true, tether: null });
+    // tap b again: hides it, and the most recent thumbnail (a) steps up
     s.toggleImage(card('b'));
-    expect(useExplorerStore.getState().images).toHaveLength(0);
+    imgs = useExplorerStore.getState().images;
+    expect(imgs.map((c) => [c.subItemId, c.shelved])).toEqual([['a', false]]);
   });
 
-  it('keeps detached images when the submenu collapses, drops attached ones', () => {
+  it('closing the submenu keeps every image (just untethered)', () => {
     const s = useExplorerStore.getState();
     s.openSubMenu('item-1', placement);
     s.toggleImage(card('a'));
-    const id = useExplorerStore.getState().images[0].id;
-    s.detachImage(id);
     s.toggleImage(card('b'));
-    expect(useExplorerStore.getState().images).toHaveLength(2);
     s.closeSubMenu();
     const imgs = useExplorerStore.getState().images;
-    expect(imgs).toHaveLength(1);
-    expect(imgs[0]).toMatchObject({ id, detached: true, tether: null });
+    expect(imgs).toHaveLength(2);
+    for (const c of imgs) expect(c).toMatchObject({ detached: true, tether: null });
   });
 
   it('first interaction ends the wander drift', () => {
@@ -90,7 +94,7 @@ describe('explorer store', () => {
     expect(z[first]).toBeGreaterThan(Math.max(...imgs.filter((c) => c.id !== first).map((c) => c.z)));
   });
 
-  it('submenu rotate mode drops the attached image and resets with the submenu', () => {
+  it('submenu rotate mode untethers images and resets with the submenu', () => {
     const s = useExplorerStore.getState();
     s.openSubMenu('item-1', placement);
     s.toggleImage(card('a'));
@@ -102,7 +106,9 @@ describe('explorer store', () => {
     let st = useExplorerStore.getState();
     expect(st.subSpinMode).toBe(true);
     expect(st.activeSubItemId).toBeNull();
-    expect(st.images.map((c) => c.id)).toEqual([detachedId]); // attached one closed, detached kept
+    expect(st.images).toHaveLength(2); // both kept
+    expect(st.images.every((c) => c.detached && c.tether === null)).toBe(true);
+    expect(st.images.some((c) => c.id === detachedId)).toBe(true);
     s.openSubMenu('item-2', placement);
     st = useExplorerStore.getState();
     expect(st).toMatchObject({ subSpinMode: false, subRingStep: 0 });
@@ -120,6 +126,48 @@ describe('explorer store', () => {
     const id = useExplorerStore.getState().images[0].id;
     s.resizeImage(id, 300, 250, 500, 380);
     expect(useExplorerStore.getState().images[0]).toMatchObject({ x: 300, y: 250, width: 500, height: 380 });
+  });
+
+  it('tapping a thumbnail brings it back; the active one takes its place at the end of the tray', () => {
+    const s = useExplorerStore.getState();
+    for (const k of ['a', 'b', 'c']) s.toggleImage(card(k));
+    const a = useExplorerStore.getState().images.find((c) => c.subItemId === 'a')!;
+    s.activateImage(a.id);
+    const imgs = useExplorerStore.getState().images;
+    expect(imgs.map((c) => [c.subItemId, c.shelved])).toEqual([
+      ['b', true],
+      ['c', true],
+      ['a', false],
+    ]);
+  });
+
+  it('opening an image that is already in the tray brings it back instead of duplicating it', () => {
+    const s = useExplorerStore.getState();
+    s.toggleImage(card('a'));
+    s.toggleImage(card('b'));
+    s.toggleImage(card('a'));
+    const imgs = useExplorerStore.getState().images;
+    expect(imgs.map((c) => [c.subItemId, c.shelved])).toEqual([
+      ['b', true],
+      ['a', false],
+    ]);
+  });
+
+  it('keeps at most 5 thumbnails in the tray (oldest leave first)', () => {
+    const s = useExplorerStore.getState();
+    for (const k of ['a', 'b', 'c', 'd', 'e', 'f', 'g']) s.toggleImage(card(k));
+    const imgs = useExplorerStore.getState().images;
+    expect(imgs.filter((c) => c.shelved).map((c) => c.subItemId)).toEqual(['b', 'c', 'd', 'e', 'f']);
+    expect(imgs.filter((c) => !c.shelved).map((c) => c.subItemId)).toEqual(['g']);
+  });
+
+  it('closing a thumbnail leaves the active image alone', () => {
+    const s = useExplorerStore.getState();
+    s.toggleImage(card('a'));
+    s.toggleImage(card('b'));
+    const a = useExplorerStore.getState().images[0];
+    s.closeImage(a.id);
+    expect(useExplorerStore.getState().images.map((c) => [c.subItemId, c.shelved])).toEqual([['b', false]]);
   });
 });
 

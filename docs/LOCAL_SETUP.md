@@ -136,6 +136,9 @@ controller finds them by itself; the top-right button shows how many screens are
 | Drag an image | detach it and place it anywhere |
 | Pinch an image (two fingers) | zoom it in / out |
 | Double-tap an image | zoom in to 2× / back to normal size |
+| Open more images | earlier ones become thumbnails in a tray at the bottom right (up to 5) |
+| Tap a thumbnail | bring it back as the active image |
+| Zoom an image in | split view: image on the right half (max 50% width, between the screen info and the tray), menus docked on the left half |
 | Flick an image toward a screen | send it to that screen, full screen |
 | No touch for 15 s | the ring ticks round like a clock |
 

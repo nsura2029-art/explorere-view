@@ -49,7 +49,20 @@ Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Poin
   item. Tap the sub item again to hide it.
   **Drag the image** to detach it: it stays wherever you drop it (on top of everything, tap to bring
   to front, × to close). **Pinch with two fingers** to zoom it in or out (it follows your fingers and
-  stays on screen), or **double-tap** it to zoom in to 2× / back to normal. Attached images close with their submenu; detached ones stay.
+  stays on screen), or **double-tap** it to zoom in to 2× / back to normal.
+- **Several images → tray:** only the newest image is a full (active) card. Opening another sub
+  item's image moves the earlier ones into a **tray of thumbnails along the bottom of the right
+  half**, side by side (newest on the right, up to 5; the oldest drops off). Tap a thumbnail to
+  bring it back as the active image (the current one takes its place in the tray); opening an
+  image that is already in the tray brings it back too. Closing the active image brings up the most
+  recent thumbnail. Flick a thumbnail toward an external screen to throw it; a slow drag snaps it
+  back into the tray. Closing the submenu keeps the images (they just lose their tether).
+- **Split view:** an image can grow to at most **half the screen width**, and only in the space
+  between the top-right screen info ("Open screens") and the tray. Whenever the tray has images or
+  the active image is zoomed in (≈15% past its default size), the active image lives in the
+  **right half** and the main menu plus any open submenu dock in the **left half**, shrinking just
+  enough to fit (a tap on empty space then only closes the submenu). With no tray and no zoom, the
+  menus return to full size. Attached images close with their submenu; detached ones stay.
 
 ## External screens (throw to display)
 

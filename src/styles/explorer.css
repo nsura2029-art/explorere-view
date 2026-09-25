@@ -595,6 +595,29 @@ body {
   cursor: pointer;
   touch-action: none;
 }
+/* tray thumbnail (earlier images, bottom right): smaller title bar, tap to bring back */
+.image-card.is-shelved {
+  cursor: pointer;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(150, 160, 255, 0.45),
+    0 0 0 3px rgba(6, 8, 26, 0.85),
+    0 0 18px 3px rgba(90, 80, 255, 0.3),
+    0 10px 24px rgba(0, 0, 0, 0.5);
+}
+.image-card.is-shelved .image-card__caption {
+  flex-basis: 36px;
+  padding-left: 10px;
+  gap: 2px;
+}
+.image-card.is-shelved .image-card__title {
+  font-size: 11.5px;
+}
+.image-card.is-shelved .image-card__close {
+  flex-basis: 36px;
+  width: 36px;
+  height: 36px;
+}
 .image-card__close:active {
   background: rgba(255, 255, 255, 0.12);
 }

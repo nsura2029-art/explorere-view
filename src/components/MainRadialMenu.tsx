@@ -16,7 +16,13 @@ import { useIdle } from '../hooks/useIdle';
 import { usePointerDrag } from '../hooks/usePointerDrag';
 import { useRingSpin } from '../hooks/useRingSpin';
 import { useExplorerStore } from '../store/useExplorerStore';
-import { attachedCardCenter, cardSize } from '../utils/cardPlacement';
+import {
+  attachedCardCenter,
+  cardSize,
+  fitMenusInRegion,
+  MAX_CARD_SHARE,
+  menuSplitRegion,
+} from '../utils/cardPlacement';
 import { clampMenuPosition, type Viewport } from '../utils/clampPosition';
 import { EDGE_MARGIN, type MenuLayout } from '../utils/menuLayout';
 import { getRadialPositions, type Point } from '../utils/radialGeometry';
@@ -86,11 +92,15 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   const setMotionPhase = useExplorerStore((s) => s.setMotionPhase);
   const ringStep = useExplorerStore((s) => s.ringStep);
   const spinMode = useExplorerStore((s) => s.spinMode);
+  // Split view: an image is zoomed in, or earlier images wait in the tray.
+  const docked = useExplorerStore((s) => s.focusCardId !== null || s.images.some((c) => c.shelved));
 
   // Menu center lives in motion values so movement never re-renders the tree.
   const x = useMotionValue(menuPosition.x);
   const y = useMotionValue(menuPosition.y);
   const moveScale = useMotionValue(1);
+  // Split view: the whole menu (main + submenu) shrinks to fit the left half.
+  const compactScale = useMotionValue(1);
   const moveToken = useRef(0);
   // Clock-tick rotation of the item ring; items counter-rotate so labels stay upright.
   const ringAngle = useMotionValue(ringStep * SLOT_DEG);
@@ -185,6 +195,39 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     settle: TICK_SPRING,
   });
 
+  // Split view (a zoomed image owns the right half): dock the menus in the left half, scaled to fit
+  // the main menu plus any open submenu. Undocking restores full size where the menu is.
+  useEffect(() => {
+    const s = useExplorerStore.getState();
+    const { layout: l, viewport: vp, reduceMotion: rm } = latest.current;
+    const t = rm ? MOVE_REDUCED : MOVE_SPRING;
+    if (docked) {
+      // Don't yank the menu away from a finger that is dragging it.
+      if (s.interactionMode === 'dragging') return;
+      const box = { minX: -l.extent, minY: -l.extent, maxX: l.extent, maxY: l.extent };
+      if (subMenu) {
+        const e = l.sub.extent;
+        box.minX = Math.min(box.minX, subMenu.center.x - e);
+        box.minY = Math.min(box.minY, subMenu.center.y - e);
+        box.maxX = Math.max(box.maxX, subMenu.center.x + e);
+        box.maxY = Math.max(box.maxY, subMenu.center.y + e);
+      }
+      const fit = fitMenusInRegion(box, menuSplitRegion(vp, EDGE_MARGIN));
+      animate(compactScale, fit.scale, t);
+      s.setMenuScale(fit.scale);
+      s.setMenuPosition(fit.center, 'spring');
+    } else if (s.menuScale !== 1 || compactScale.get() !== 1) {
+      animate(compactScale, 1, t);
+      s.setMenuScale(1);
+      if (s.menuPosition) {
+        s.setMenuPosition(
+          clampMenuPosition({ desiredPosition: s.menuPosition, viewport: vp, menuRadius: l.extent, margin: EDGE_MARGIN }),
+          'spring',
+        );
+      }
+    }
+  }, [docked, subMenu, viewport, layout, compactScale]);
+
   // The clock ticking runs only after 15 s without any touch (and from load until the first touch),
   // and never with a submenu open, in rotate mode or under a finger, so submenus and image
   // tethers always line up with their item.
@@ -234,7 +277,8 @@ export function MainRadialMenu({ layout, viewport }: Props) {
       startAngle: ringStartAngle(s.ringStep),
     });
     s.openSubMenu(itemId, placement);
-    if (placement.shift.x !== 0 || placement.shift.y !== 0) {
+    // Docked in split view, the dock refits both menus instead of shifting.
+    if (s.focusCardId === null && (placement.shift.x !== 0 || placement.shift.y !== 0)) {
       // Not enough room: glide the menu just far enough for the submenu to fit (spec 4.8).
       s.setMenuPosition(
         clampMenuPosition({
@@ -253,17 +297,19 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     const main = MAIN_MENU_ITEMS.find((m) => m.id === s.activeMainItemId);
     if (!s.menuPosition || !s.subMenu || !main) return;
     const { layout: l, viewport: vp } = latest.current;
-    const itemCenter = { x: s.menuPosition.x + rel.x, y: s.menuPosition.y + rel.y };
-    const hubCenter = { x: s.menuPosition.x + s.subMenu.center.x, y: s.menuPosition.y + s.subMenu.center.y };
+    // Offsets are at full size; the menu may be scaled down (split view).
+    const k = s.menuScale;
+    const itemCenter = { x: s.menuPosition.x + rel.x * k, y: s.menuPosition.y + rel.y * k };
+    const hubCenter = { x: s.menuPosition.x + s.subMenu.center.x * k, y: s.menuPosition.y + s.subMenu.center.y * k };
     const len = Math.hypot(itemCenter.x - hubCenter.x, itemCenter.y - hubCenter.y) || 1;
     const dir = { x: (itemCenter.x - hubCenter.x) / len, y: (itemCenter.y - hubCenter.y) / len };
-    const r = l.sub.nodeSize / 2;
+    const r = (l.sub.nodeSize / 2) * k;
     const { width, height } = cardSize(vp, SCENE_ASPECT);
     // Keep the card off both menus (and the corner "Open screens" button) when the preferred
     // spot is pushed back by a screen edge.
     const obstacles = [
-      { ...s.menuPosition, r: l.ringRadius + l.nodeSize / 2 },
-      { ...hubCenter, r: l.sub.ringRadius + r },
+      { ...s.menuPosition, r: (l.ringRadius + l.nodeSize / 2) * k },
+      { ...hubCenter, r: l.sub.ringRadius * k + r },
     ];
     const btn = document.querySelector('.screens__btn')?.getBoundingClientRect();
     if (btn) obstacles.push({ x: btn.left + btn.width / 2, y: btn.top + btn.height / 2, r: Math.max(btn.width, btn.height) / 2 + 8 });
@@ -349,10 +395,13 @@ export function MainRadialMenu({ layout, viewport }: Props) {
         return;
       }
       const { layout: l, viewport: vp } = latest.current;
+      const s = useExplorerStore.getState();
+      // Docked in split view, the menu stays in the left half.
+      const area = s.focusCardId === null ? vp : { width: vp.width * (1 - MAX_CARD_SHARE), height: vp.height };
       const p = clampMenuPosition({
         desiredPosition: { x: dragOrigin.current.x + delta.x, y: dragOrigin.current.y + delta.y },
-        viewport: vp,
-        menuRadius: l.extent,
+        viewport: area,
+        menuRadius: l.extent * s.menuScale,
         margin: EDGE_MARGIN,
       });
       x.set(p.x);
@@ -383,7 +432,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   return (
     <motion.div
       className={`menu-anchor${interactionMode === 'dragging' ? ' is-dragging' : ''}${spinMode ? ' is-spinning' : ''}`}
-      style={{ x, y }}
+      style={{ x, y, scale: compactScale }}
       data-role="main-menu"
       {...handlers}
     >
