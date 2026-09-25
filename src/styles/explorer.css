@@ -312,6 +312,19 @@ body {
   touch-action: none;
 }
 
+/* idle demo: the pulsing item sits above its neighbours with a little more glow */
+.orb--item.is-demo {
+  z-index: 5;
+  filter: brightness(1.12);
+  box-shadow:
+    0 0 0 2px var(--rim),
+    0 0 0 5px rgba(6, 8, 26, 0.92),
+    0 0 0 6.5px color-mix(in srgb, var(--rim) 55%, transparent),
+    0 0 36px 10px var(--glow),
+    inset 0 0 16px rgba(255, 255, 255, 0.2),
+    inset 0 -12px 26px rgba(0, 0, 0, 0.3);
+}
+
 /* rotate mode (double-tapped an item): the ring is grabbable and the hub says so */
 .menu-anchor.is-spinning .menu-shell,
 .menu-anchor.is-spinning .orb--item {

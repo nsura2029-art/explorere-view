@@ -127,6 +127,7 @@ controller finds them by itself; the top-right button shows how many screens are
 | Gesture | Result |
 |---|---|
 | (page load) | the menu drifts in from the bottom-left and roams the window until you touch |
+| (no touch for 8–12 s, or 2 s after load) | idle demo: a random item pulses out (2×, chime) and back, then its submenu opens briefly; any touch stops it |
 | Tap empty space | ripple + the menu glides there |
 | Drag hub / item / ring | move the menu |
 | Tap an item | open its submenu (tap again to close) |
@@ -154,3 +155,4 @@ controller finds them by itself; the top-right button shows how many screens are
 | Throws go to the wrong screen | Fix the screen arrangement in Windows Display settings. |
 | Touches land on an external screen | Redo **Tablet PC Settings → Setup…** (step 7.2). |
 | Fonts look different offline | The Sora font loads from Google Fonts; offline it falls back to Segoe UI. |
+| Demo chime is silent at startup | Browsers block sound until the first touch. For kiosk use start Chrome/Edge with `--autoplay-policy=no-user-gesture-required`. |

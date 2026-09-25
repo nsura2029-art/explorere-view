@@ -22,6 +22,16 @@ Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Poin
   then keeps roaming to random spots across the window on smooth curves (never leaving the screen)
   until the first touch. The first touch stops it where it is (or glides it fully into view if it
   was still coming in); after that it only "breathes".
+- **Idle demo (attract loop):** 2 s after loading, and again after 8–12 s without any touch, the
+  menu shows itself off: a random main item (never the same one twice in a row) glides straight
+  out from the menu center while growing to 2× with a little extra glow and the crystalline chime
+  (`docs/original_crystalline_touch_3s.mp3`, moderate volume, never overlapping), holds ~0.4 s,
+  glides back to exactly its place and size; 1–2 s later that item's submenu opens for 1–2 s and
+  collapses; 1–2 s later the next item. Any touch, click or key stops it instantly (the item glides
+  home, the chime stops) and the touch is handled as usual; a submenu it was showing stays open for
+  the user. Disabled with the system "reduce motion" setting. Browsers only allow sound after the
+  first touch on the page; for a kiosk that must chime from startup, launch Chrome/Edge with
+  `--autoplay-policy=no-user-gesture-required`.
 - **Tap empty space:** a water ripple appears at the exact touch point and the menu glides there
   (clamped so it never leaves the screen). Extra simultaneous fingers only ripple.
 - **Drag** the hub, an item or the ring with one finger (10 px threshold) to move the menu; a drag never

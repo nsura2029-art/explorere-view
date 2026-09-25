@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   animate,
   AnimatePresence,
@@ -10,6 +10,7 @@ import {
   type Transition,
 } from 'framer-motion';
 import { MAIN_MENU_ITEMS, TONE_COLORS, type SubMenuItem } from '../data/menuData';
+import { useAttractDemo } from '../hooks/useAttractDemo';
 import { useClockTicks } from '../hooks/useClockTicks';
 import { useDoubleTap } from '../hooks/useDoubleTap';
 import { useIdle } from '../hooks/useIdle';
@@ -25,11 +26,20 @@ import {
 } from '../utils/cardPlacement';
 import { clampMenuPosition, type Viewport } from '../utils/clampPosition';
 import { EDGE_MARGIN, type MenuLayout } from '../utils/menuLayout';
+import {
+  DEMO_BACK_MS,
+  DEMO_OUT_MS,
+  DEMO_SCALE,
+  demoDistance,
+  outwardOffset,
+  pickDemoItem,
+} from '../utils/attractDemo';
+import { playChime, stopChime } from '../utils/chime';
 import { getRadialPositions, type Point } from '../utils/radialGeometry';
 import { SCENE_ASPECT } from '../utils/sceneImage';
 import { computeSubMenuPlacement } from '../utils/subMenuPlacement';
 import { initialWander, safeBounds, wanderSpeed, wanderStep, type WanderState } from '../utils/wander';
-import { MainMenuItem } from './MainMenuItem';
+import { MainMenuItem, type ItemPulse } from './MainMenuItem';
 import { MenuConnectorRing } from './MenuConnectorRing';
 import { SpinHubLabel } from './SpinHubLabel';
 import { SubRadialMenu } from './SubRadialMenu';
@@ -111,6 +121,8 @@ export function MainRadialMenu({ layout, viewport }: Props) {
 
   // --- pre-interaction drift: in from the bottom-left, then roaming the window until the first touch ---
   const wander = useRef<WanderState | null>(null);
+  // The idle demo holds the drift still while it shows a submenu.
+  const driftPaused = useRef(false);
   const wanderBounds = () => {
     const { layout: l, viewport: vp } = latest.current;
     return safeBounds(vp.width, vp.height, l.extent + EDGE_MARGIN);
@@ -128,7 +140,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
 
   useAnimationFrame((_time, delta) => {
     const w = wander.current;
-    if (!w || useExplorerStore.getState().motionPhase !== 'wandering') return;
+    if (!w || driftPaused.current || useExplorerStore.getState().motionPhase !== 'wandering') return;
     const vp = latest.current.viewport;
     // Cap the step so a background tab / hiccup never makes it jump.
     const next = wanderStep(w, Math.min(delta, 50) / 1000, wanderBounds(), wanderSpeed(vp.width, vp.height));
@@ -238,8 +250,11 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     s.setSpinMode(false);
     s.setSubSpinMode(false);
   }, [idle]);
+  // Idle demo: which item is pulsing (outward + 2×) right now, if any.
+  const [pulse, setPulse] = useState<ItemPulse | null>(null);
   const ticking =
     idle &&
+    pulse === null &&
     !reduceMotion &&
     !spinMode &&
     (motionPhase === 'idle' || motionPhase === 'wandering') &&
@@ -256,13 +271,12 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   );
   const tones = useMemo(() => MAIN_MENU_ITEMS.map((m) => m.tone), []);
 
-  const toggleItem = useCallback((itemId: string) => {
+  /** Opens `itemId`'s submenu (placing it, and nudging the menu if it would not fit). */
+  const openItem = useCallback((itemId: string) => {
     const s = useExplorerStore.getState();
-    if (s.activeMainItemId === itemId) {
-      s.closeSubMenu();
-      return;
-    }
-    const pos = s.menuPosition;
+    // While the intro drift runs, the store position is stale: use where the menu really is.
+    const drifting = s.motionPhase === 'wandering';
+    const pos = drifting ? { x: x.get(), y: y.get() } : s.menuPosition;
     const itemIndex = MAIN_MENU_ITEMS.findIndex((m) => m.id === itemId);
     if (!pos || itemIndex < 0) return;
     const { layout: l, viewport: vp } = latest.current;
@@ -280,17 +294,111 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     // Docked in split view, the dock refits both menus instead of shifting.
     if (s.focusCardId === null && (placement.shift.x !== 0 || placement.shift.y !== 0)) {
       // Not enough room: glide the menu just far enough for the submenu to fit (spec 4.8).
-      s.setMenuPosition(
-        clampMenuPosition({
-          desiredPosition: { x: pos.x + placement.shift.x, y: pos.y + placement.shift.y },
-          viewport: vp,
-          menuRadius: l.extent,
-          margin: EDGE_MARGIN,
-        }),
-        'spring',
-      );
+      const target = clampMenuPosition({
+        desiredPosition: { x: pos.x + placement.shift.x, y: pos.y + placement.shift.y },
+        viewport: vp,
+        menuRadius: l.extent,
+        margin: EDGE_MARGIN,
+      });
+      if (drifting) {
+        animate(x, target.x, MOVE_SPRING);
+        animate(y, target.y, MOVE_SPRING);
+      } else s.setMenuPosition(target, 'spring');
+    }
+  }, [x, y]);
+
+  const toggleItem = useCallback(
+    (itemId: string) => {
+      const s = useExplorerStore.getState();
+      if (s.activeMainItemId === itemId) s.closeSubMenu();
+      else openItem(itemId);
+    },
+    [openItem],
+  );
+
+  // --- idle attract demo: pulse a random item out and back, then preview its submenu ---
+  const pulseWaiter = useRef<{ id: string; out: boolean; resolve: () => void } | null>(null);
+  const onPulseSettled = useCallback((id: string, out: boolean) => {
+    const w = pulseWaiter.current;
+    if (w && w.id === id && w.out === out) {
+      pulseWaiter.current = null;
+      w.resolve();
     }
   }, []);
+  /** Resolves when the item reports the animation finished (or after `fallbackMs`, whichever first). */
+  const waitPulse = (id: string, out: boolean, fallbackMs: number) =>
+    new Promise<void>((resolve) => {
+      const t = window.setTimeout(() => {
+        if (pulseWaiter.current?.resolve === done) pulseWaiter.current = null;
+        resolve();
+      }, fallbackMs);
+      const done = () => {
+        window.clearTimeout(t);
+        resolve();
+      };
+      pulseWaiter.current = { id, out, resolve: done };
+    });
+  /** Drift picks up again from wherever the menu is now. */
+  const resumeDrift = () => {
+    if (!driftPaused.current) return;
+    driftPaused.current = false;
+    if (wander.current) wander.current = { ...wander.current, pos: { x: x.get(), y: y.get() }, vel: { x: 0, y: 0 } };
+  };
+
+  useAttractDemo(!reduceMotion, {
+    pick: (exclude) => {
+      const s = useExplorerStore.getState();
+      const { layout: l, viewport: vp } = latest.current;
+      const k = s.menuScale;
+      const c = { x: x.get(), y: y.get() };
+      const reach = (l.ringRadius + demoDistance(l.nodeSize)) * k;
+      const radius = (l.nodeSize / 2) * DEMO_SCALE * k + 12;
+      // Prefer items whose enlarged pulse stays fully on screen.
+      const fits = (id: string) => {
+        const i = MAIN_MENU_ITEMS.findIndex((m) => m.id === id);
+        const a = (ringStartAngle(s.ringStep) + i * SLOT_DEG) * (Math.PI / 180);
+        const px = c.x + Math.cos(a) * reach;
+        const py = c.y + Math.sin(a) * reach;
+        return px - radius >= 0 && py - radius >= 0 && px + radius <= vp.width && py + radius <= vp.height;
+      };
+      return pickDemoItem(
+        MAIN_MENU_ITEMS.map((m) => m.id),
+        exclude,
+        fits,
+      );
+    },
+    pulseOut: (id) => {
+      const s = useExplorerStore.getState();
+      s.setSpinMode(false);
+      s.setSubSpinMode(false);
+      const { layout: l } = latest.current;
+      const i = MAIN_MENU_ITEMS.findIndex((m) => m.id === id);
+      // Straight away from the menu center (in the ring's own coordinates, so it stays radial
+      // however far the ring has ticked round).
+      const off = outwardOffset(nodes[i], center, demoDistance(l.nodeSize));
+      setPulse({ id, dx: off.x, dy: off.y, out: true });
+      playChime();
+      return waitPulse(id, true, DEMO_OUT_MS + 700);
+    },
+    pulseBack: (id) => {
+      setPulse((p) => (p && p.id === id ? { ...p, out: false } : p));
+      return waitPulse(id, false, DEMO_BACK_MS + 700).then(() => setPulse(null));
+    },
+    openSubmenu: (id) => {
+      if (useExplorerStore.getState().motionPhase === 'wandering') driftPaused.current = true;
+      openItem(id);
+    },
+    closeSubmenu: () => {
+      useExplorerStore.getState().closeSubMenu();
+      resumeDrift();
+    },
+    abort: () => {
+      pulseWaiter.current = null;
+      setPulse(null);
+      stopChime();
+      resumeDrift();
+    },
+  });
 
   const onSubSelect = useCallback((sub: SubMenuItem, index: number, rel: Point) => {
     const s = useExplorerStore.getState();
@@ -517,6 +625,8 @@ export function MainRadialMenu({ layout, viewport }: Props) {
                     isActive={activeMainItemId === item.id}
                     counterRotate={counterAngle}
                     onKeyboardActivate={toggleItem}
+                    pulse={pulse?.id === item.id ? pulse : null}
+                    onPulseSettled={onPulseSettled}
                   />
                 ))}
                 <MenuConnectorRing
