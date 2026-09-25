@@ -3,6 +3,9 @@
 Touch-first radial menu for a 16" touchscreen laptop. Browser-only (Chrome / Edge).
 Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Pointer Events.
 
+History: [CHANGELOG.md](CHANGELOG.md) · Agent/maintainer brief (context, decisions, pending work):
+[CLAUDE.md](CLAUDE.md) · Setup: [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)
+
 ## Status
 
 | Phase | Scope | State |
@@ -10,10 +13,12 @@ Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Poin
 | 1 | Bootstrap, tokens | done |
 | 2 | Static main menu (8 items, hub, liquid connectors, icons) | done |
 | 3 | Materialize reveal, idle breathing, reduced motion | done |
-| 4 | Bouncing-ball attract loop, ripple, tap-to-relocate, one-finger drag, multi-touch safety | done |
+| 4 | Drifting intro, ripple, tap-to-relocate, one-finger drag, multi-touch safety | done |
 | 5 | Collapsible submenus, outside-tap collapse, edge-aware submenu placement | done |
 | 6 | Sub item → image card; drag to detach and move freely | done |
 | 7 | Throw image cards to external screens (full-screen display windows) | done |
+| 8 | Rotate modes (main + submenu), clock ticks, pinch/double-tap zoom, image tray + split view | done |
+| 9 | Idle attract demo, crystalline touch burst, tap-only chime + mute button | done |
 | — | Real touchscreen gate (QG-6) + two 32" screens on target hardware | pending |
 
 ## Behaviour
@@ -23,23 +28,25 @@ Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Poin
   until the first touch. The first touch stops it where it is (or glides it fully into view if it
   was still coming in); after that it only "breathes".
 - **Idle demo (attract loop):** 2 s after loading, and again after 8–12 s without any touch, the
-  menu shows itself off: a random main item (never the same one twice in a row) glides straight
-  out from the menu center while growing to 2× with a little extra glow and the crystalline chime
-  (`docs/original_crystalline_touch_3s.mp3`, moderate volume, never overlapping), holds ~0.4 s,
+  menu shows itself off (silently): a random main item (never the same one twice in a row) glides
+  straight out from the menu center while growing to 2× with a little extra glow, holds ~0.4 s,
   glides back to exactly its place and size; 1–2 s later that item's submenu opens for 1–2 s and
   collapses; 1–2 s later the next item. Any touch, click or key stops it instantly (the item glides
-  home, the chime stops) and the touch is handled as usual; a submenu it was showing stays open for
-  the user. Disabled with the system "reduce motion" setting. Browsers only allow sound after the
-  first touch on the page; for a kiosk that must chime from startup, launch Chrome/Edge with
-  `--autoplay-policy=no-user-gesture-required`.
+  home) and the touch is handled as usual; a submenu it was showing stays open for the user.
+  Disabled with the system "reduce motion" setting.
 - **Crystalline touch burst (every touch/click, anywhere):** exactly under the finger or cursor —
   a bright contact flash, a soft energy ring, then 8–20 tiny sparkles, 3–5 medium stars and 1–2
   large white/icy four-point feature stars radiate outward in white/blue/purple/magenta and fade
-  within ~1 s, while the crystalline chime restarts from the beginning (one sound at a time,
-  volume `DEFAULT_CHIME_VOLUME` / `setChimeVolume` in `utils/chime.ts`). Purely visual
-  (`pointer-events: none`): menus, ripples, dragging and zoom behave exactly as before. Each finger
-  gets its own burst; at most 8 bursts at once. With a finger the very first touch after loading
-  may be silent (browsers unlock sound when the finger lifts).
+  within ~1 s. Purely visual (`pointer-events: none`): menus, ripples, dragging and zoom behave
+  exactly as before. Each finger gets its own burst; at most 8 bursts at once.
+- **Crystalline chime (taps only):** plays when a finger, pen or mouse press is **released without
+  moving**: tap, click, pen tap, each tap of a double tap, long press. Silent for drags, flicks,
+  pinches, turning a ring, right/middle clicks, keys, the wheel, the idle demo, and the utility
+  controls × (close image), "Open screens" and the mute button (anything marked
+  `data-sound="off"`). One sound at a time (a new tap restarts it). Volume `DEFAULT_CHIME_VOLUME` /
+  `setChimeVolume` in `utils/chime.ts`.
+- **Mute button** (speaker, just left of "Open screens"): mutes every chime; the choice is
+  remembered across reloads. Turning sound back on plays one confirmation chime.
 - **Tap empty space:** a water ripple appears at the exact touch point and the menu glides there
   (clamped so it never leaves the screen). Extra simultaneous fingers only ripple.
 - **Drag** the hub, an item or the ring with one finger (10 px threshold) to move the menu; a drag never

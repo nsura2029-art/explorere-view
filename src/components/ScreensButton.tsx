@@ -4,6 +4,7 @@ import { openDisplayWindows, type OpenResult } from '../displays/openDisplays';
 import { displayUrl } from '../displays/protocol';
 import { useDisplayStore } from '../displays/useDisplayLink';
 import { usePointerDrag } from '../hooks/usePointerDrag';
+import { SoundToggle } from './SoundToggle';
 
 const NOTE_MS = 7000;
 
@@ -50,21 +51,25 @@ export function ScreensButton() {
 
   return (
     <div className="screens">
-      <button
-        type="button"
-        className={`screens__btn${count > 0 ? ' is-linked' : ''}`}
-        {...handlers}
-        onClick={(e) => {
-          if (e.detail === 0) void open();
-        }}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="2" y="4" width="9" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
-          <rect x="13" y="4" width="9" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
-          <path d="M8 20h8M12 14v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <span>{count > 0 ? `${count} screen${count === 1 ? '' : 's'} linked` : 'Open screens'}</span>
-      </button>
+      <div className="screens__row">
+        <SoundToggle />
+        <button
+          type="button"
+          className={`screens__btn${count > 0 ? ' is-linked' : ''}`}
+          data-sound="off"
+          {...handlers}
+          onClick={(e) => {
+            if (e.detail === 0) void open();
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="4" width="9" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+            <rect x="13" y="4" width="9" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M8 20h8M12 14v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <span>{count > 0 ? `${count} screen${count === 1 ? '' : 's'} linked` : 'Open screens'}</span>
+        </button>
+      </div>
       <AnimatePresence>
         {note && (
           <motion.div

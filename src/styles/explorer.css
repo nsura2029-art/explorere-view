@@ -701,6 +701,38 @@ body {
   gap: 8px;
   max-width: min(420px, calc(100vw - 32px));
 }
+.screens__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* mute / unmute, just left of "Open screens" (same glass style) */
+.sound-toggle {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: none;
+  background: rgba(14, 16, 52, 0.72);
+  box-shadow:
+    0 0 0 1.5px rgba(126, 141, 255, 0.45),
+    0 6px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+.sound-toggle.is-muted {
+  color: var(--muted);
+  box-shadow:
+    0 0 0 1.5px rgba(255, 110, 170, 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.sound-toggle:active {
+  filter: brightness(1.2);
+}
 .screens__btn {
   display: inline-flex;
   align-items: center;

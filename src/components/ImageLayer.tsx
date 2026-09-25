@@ -28,6 +28,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
     <button
       type="button"
       className="image-card__close"
+      data-sound="off"
       aria-label="Close image"
       {...handlers}
       onClick={(e) => {
@@ -43,7 +44,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
 
 /** Space kept clear under the top-right screen info ("Open screens"), measured live. */
 function topInset(): number {
-  const r = document.querySelector('.screens__btn')?.getBoundingClientRect();
+  const r = document.querySelector('.screens__row')?.getBoundingClientRect();
   return r && r.height > 0 ? Math.ceil(r.bottom + 12) : DEFAULT_TOP_INSET;
 }
 

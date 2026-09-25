@@ -34,7 +34,6 @@ import {
   outwardOffset,
   pickDemoItem,
 } from '../utils/attractDemo';
-import { playChime, stopDemoChime } from '../utils/chime';
 import { getRadialPositions, type Point } from '../utils/radialGeometry';
 import { SCENE_ASPECT } from '../utils/sceneImage';
 import { computeSubMenuPlacement } from '../utils/subMenuPlacement';
@@ -376,8 +375,8 @@ export function MainRadialMenu({ layout, viewport }: Props) {
       // Straight away from the menu center (in the ring's own coordinates, so it stays radial
       // however far the ring has ticked round).
       const off = outwardOffset(nodes[i], center, demoDistance(l.nodeSize));
+      // Silent: sound is reserved for the user's own taps.
       setPulse({ id, dx: off.x, dy: off.y, out: true });
-      playChime('demo');
       return waitPulse(id, true, DEMO_OUT_MS + 700);
     },
     pulseBack: (id) => {
@@ -395,7 +394,6 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     abort: () => {
       pulseWaiter.current = null;
       setPulse(null);
-      stopDemoChime();
       resumeDrift();
     },
   });
@@ -419,8 +417,11 @@ export function MainRadialMenu({ layout, viewport }: Props) {
       { ...s.menuPosition, r: (l.ringRadius + l.nodeSize / 2) * k },
       { ...hubCenter, r: l.sub.ringRadius * k + r },
     ];
-    const btn = document.querySelector('.screens__btn')?.getBoundingClientRect();
-    if (btn) obstacles.push({ x: btn.left + btn.width / 2, y: btn.top + btn.height / 2, r: Math.max(btn.width, btn.height) / 2 + 8 });
+    // The top-right controls (mute, "Open screens"): one circle each.
+    for (const el of document.querySelectorAll('.screens__row > *')) {
+      const b = el.getBoundingClientRect();
+      obstacles.push({ x: b.left + b.width / 2, y: b.top + b.height / 2, r: Math.max(b.width, b.height) / 2 + 8 });
+    }
     const c = attachedCardCenter(itemCenter, dir, r, width, height, vp, obstacles);
     s.toggleImage({
       mainItemId: main.id,

@@ -11,19 +11,19 @@ import { activePointerCount } from '../utils/pointerRegistry';
 export type AttractDemoApi = {
   /** A random main item id, never `exclude` when another is available. */
   pick: (exclude: string | null) => string | null;
-  /** Item grows and moves outward (chime plays); resolves when it arrived. */
+  /** Item grows and moves outward (silently); resolves when it arrived. */
   pulseOut: (id: string) => Promise<void>;
   /** Item returns to its exact place and size; resolves when it is back. */
   pulseBack: (id: string) => Promise<void>;
   openSubmenu: (id: string) => void;
   closeSubmenu: () => void;
-  /** Stop right now: item back to rest, chime off. Must not touch what the user is doing. */
+  /** Stop right now: item back to rest. Must not touch what the user is doing. */
   abort: () => void;
 };
 
 /**
  * Idle "attract" demo for the menu:
- * pick a random item → pulse it out (2×, outward, chime) → hold → back → pause → show its
+ * pick a random item → pulse it out (2×, outward) → hold → back → pause → show its
  * submenu → pause → collapse → pause → next item (never the same one twice in a row).
  * Any touch, click or key stops it at once; it restarts after 8–12 s with no interaction.
  */

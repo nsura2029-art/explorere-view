@@ -8,6 +8,7 @@ import { ScreensButton } from '../components/ScreensButton';
 import { ThrowPortals } from '../components/ThrowPortals';
 import { TouchSurface } from '../components/TouchSurface';
 import { useDisplayLink } from '../displays/useDisplayLink';
+import { useTapChime } from '../hooks/useTapChime';
 import { useViewport } from '../hooks/useViewport';
 import { useExplorerStore } from '../store/useExplorerStore';
 import { clampMenuPosition } from '../utils/clampPosition';
@@ -24,6 +25,8 @@ export function App() {
   const hasPosition = useExplorerStore((s) => s.menuPosition !== null);
   // Link to the display windows on the external screens (throw targets).
   useDisplayLink();
+  // Crystalline chime on taps / clicks / pen taps only.
+  useTapChime();
 
   // Place on first real layout; re-clamp into safe bounds on every resize (RT-12).
   useLayoutEffect(() => {
