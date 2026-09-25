@@ -138,22 +138,20 @@ Key mechanics:
 ## Status
 
 ### Completed
-Everything in `CHANGELOG.md` up to and including [Unreleased]: radial menu, ripples,
+Everything in `CHANGELOG.md` (latest commit on `feature/subitem-rotate`: `0a7604f`): radial menu, ripples,
 relocate/drag, submenus (+ rotate), images (detach, pinch/double-tap zoom, tray, split view),
 multi-screen throw, drift intro, clock ticks, idle demo, crystalline burst, tap-only chime + mute,
 docs (README, LOCAL_SETUP, this file, CHANGELOG). Unit tests: 160 passing.
 
 ### Pending / next
-1. **Commit + push the [Unreleased] work** (tap-only chime, mute button, silent demo, these docs)
-   on `feature/subitem-rotate` — awaiting the user's OK.
-2. Merge `feature/subitem-rotate` → `develop` → `main` when the user asks (PR or fast-forward;
+1. Merge `feature/subitem-rotate` → `develop` → `main` when the user asks (PR or fast-forward;
    `main`/`develop` are at `6e35ae9`).
-3. Real-hardware checks the pane cannot do: live animation feel and smoothness, sound sync,
+2. Real-hardware checks the pane cannot do: live animation feel and smoothness, sound sync,
    first-touch audio, multi-finger taps and pinch on the actual touchscreen (spec QG-6), two 32"
    screens (Window Management permission, fullscreen hand-off, throw directions).
-4. Public deploy: the user was setting up Vercel (production branch in Settings → Environments →
+3. Public deploy: the user was setting up Vercel (production branch in Settings → Environments →
    Production → Branch Tracking). Status unknown — ask.
-5. Kiosk launch: document/verify Chrome flags (`--kiosk`, `--autoplay-policy=no-user-gesture-required`).
+4. Kiosk launch: document/verify Chrome flags (`--kiosk`, `--autoplay-policy=no-user-gesture-required`).
 
 ### Known limitations
 - Images are generated SVG placeholders (`utils/sceneImage.ts`); real content not wired yet.

@@ -3,9 +3,15 @@
 All notable changes to the Explorer touch menu. Newest first.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates are commit dates.
 
-## [Unreleased] — on `feature/subitem-rotate` (not yet committed)
+## [Unreleased]
 
-### Changed
+Nothing yet.
+
+## 2026-09-25 — `feature/subitem-rotate` (continued)
+
+### `0a7604f` Tap-only chime, mute button, docs
+
+#### Changed
 - **Chime only on taps.** The crystalline chime now plays when a finger, pen or mouse press is
   released without moving (tap, click, pen tap, each tap of a double tap, long press). Drags,
   flicks, pinches, turning a ring, right/middle clicks, keys and the wheel are silent. Plays on
@@ -16,11 +22,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
   (`data-sound="off"`).
 - Image cards keep clear of both top-right buttons.
 
-### Added
+#### Added
 - **Mute button** (speaker icon) just left of "Open screens": mutes every chime, remembered in
   `localStorage` (`explorer.soundMuted`); turning sound on plays one confirmation chime.
 - `utils/tapSound.ts` (`TapTracker`), `hooks/useTapChime.ts`, `components/SoundToggle.tsx`,
   tests in `tests/tapSound.test.ts`.
+- `CHANGELOG.md` and `CLAUDE.md` (agent brief); README links them.
 
 ## 2026-09-25 — `feature/subitem-rotate`
 
