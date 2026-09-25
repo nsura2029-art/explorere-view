@@ -32,6 +32,14 @@ Stack: React 19 · TypeScript · Vite 7 · Framer Motion 12 · Zustand 5 · Poin
   the user. Disabled with the system "reduce motion" setting. Browsers only allow sound after the
   first touch on the page; for a kiosk that must chime from startup, launch Chrome/Edge with
   `--autoplay-policy=no-user-gesture-required`.
+- **Crystalline touch burst (every touch/click, anywhere):** exactly under the finger or cursor —
+  a bright contact flash, a soft energy ring, then 8–20 tiny sparkles, 3–5 medium stars and 1–2
+  large white/icy four-point feature stars radiate outward in white/blue/purple/magenta and fade
+  within ~1 s, while the crystalline chime restarts from the beginning (one sound at a time,
+  volume `DEFAULT_CHIME_VOLUME` / `setChimeVolume` in `utils/chime.ts`). Purely visual
+  (`pointer-events: none`): menus, ripples, dragging and zoom behave exactly as before. Each finger
+  gets its own burst; at most 8 bursts at once. With a finger the very first touch after loading
+  may be silent (browsers unlock sound when the finger lifts).
 - **Tap empty space:** a water ripple appears at the exact touch point and the menu glides there
   (clamped so it never leaves the screen). Extra simultaneous fingers only ripple.
 - **Drag** the hub, an item or the ring with one finger (10 px threshold) to move the menu; a drag never

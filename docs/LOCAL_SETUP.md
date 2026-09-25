@@ -41,7 +41,7 @@ A browser-only front-end app: no backend, database or cloud service. Everything 
 | Folder | Contents |
 |---|---|
 | `src/app` | Controller entry: background taps, resize handling, layers. |
-| `src/components` | Menu, submenu, ripples, image cards, screen badges, "Open screens" button. |
+| `src/components` | Menu, submenu, ripples, image cards, screen badges, "Open screens" button; `effects/` holds the crystalline touch burst. |
 | `src/display` | The display window shown on an external screen (`?view=display`). |
 | `src/displays` | Controller ↔ display link, opening screens, throw maths. |
 | `src/hooks` | Tap-vs-drag recognizer, double tap, ring spin (rotate mode), clock ticks, idle timer, viewport size. |
@@ -128,6 +128,7 @@ controller finds them by itself; the top-right button shows how many screens are
 |---|---|
 | (page load) | the menu drifts in from the bottom-left and roams the window until you touch |
 | (no touch for 8–12 s, or 2 s after load) | idle demo: a random item pulses out (2×, chime) and back, then its submenu opens briefly; any touch stops it |
+| Any touch or click | crystalline burst + chime exactly at the finger / cursor (visual only) |
 | Tap empty space | ripple + the menu glides there |
 | Drag hub / item / ring | move the menu |
 | Tap an item | open its submenu (tap again to close) |

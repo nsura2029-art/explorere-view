@@ -1,32 +1,58 @@
 import chimeUrl from '../../docs/original_crystalline_touch_3s.mp3';
 
-/** Moderate volume for the crystalline UI chime. */
-const CHIME_VOLUME = 0.45;
+/** Default volume for the crystalline UI chime (0–1). Change at runtime with `setChimeVolume`. */
+export const DEFAULT_CHIME_VOLUME = 0.35;
+
+/** Who started the current sound: a touch always wins over the idle demo. */
+export type ChimeSource = 'touch' | 'demo';
 
 let audio: HTMLAudioElement | null = null;
+let volume = DEFAULT_CHIME_VOLUME;
+let source: ChimeSource | null = null;
 
-/**
- * Plays the crystalline chime once. A single shared element means copies never overlap: if it
- * is still playing, this call does nothing. Browsers block sound until the page has had a user
- * gesture; that refusal is expected and silently ignored.
- */
-export function playChime() {
-  if (typeof Audio === 'undefined') return;
+function element(): HTMLAudioElement | null {
+  if (typeof Audio === 'undefined') return null;
   if (!audio) {
     audio = new Audio(chimeUrl);
     audio.preload = 'auto';
-    audio.volume = CHIME_VOLUME;
+    audio.volume = volume;
   }
-  if (!audio.paused && !audio.ended) return;
-  audio.currentTime = 0;
-  audio.play().catch(() => {
+  return audio;
+}
+
+const playing = (a: HTMLAudioElement) => !a.paused && !a.ended;
+
+/**
+ * Plays the crystalline chime. One shared element, so copies never stack:
+ * - 'touch' restarts it from the beginning on every touch/click;
+ * - 'demo' plays only if nothing is playing.
+ * Browsers block sound until the page has had a user gesture; that refusal is silently ignored.
+ */
+export function playChime(from: ChimeSource = 'demo') {
+  const a = element();
+  if (!a) return;
+  if (from === 'demo' && playing(a)) return;
+  source = from;
+  a.currentTime = 0;
+  a.play().catch(() => {
     /* autoplay blocked before the first user gesture */
   });
 }
 
-/** Stops the chime (e.g. when the user interrupts the demo). */
-export function stopChime() {
-  if (!audio || audio.paused) return;
+/** Stops the chime only if the idle demo started it (a touch's chime keeps playing). */
+export function stopDemoChime() {
+  if (!audio || source !== 'demo' || !playing(audio)) return;
   audio.pause();
   audio.currentTime = 0;
+}
+
+/** Sets the chime volume (0–1). */
+export function setChimeVolume(v: number) {
+  volume = Math.min(1, Math.max(0, v));
+  if (audio) audio.volume = volume;
+}
+
+/** Loads the sound ahead of the first touch so it starts without delay. */
+export function preloadChime() {
+  element()?.load();
 }

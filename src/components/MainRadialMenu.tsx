@@ -34,7 +34,7 @@ import {
   outwardOffset,
   pickDemoItem,
 } from '../utils/attractDemo';
-import { playChime, stopChime } from '../utils/chime';
+import { playChime, stopDemoChime } from '../utils/chime';
 import { getRadialPositions, type Point } from '../utils/radialGeometry';
 import { SCENE_ASPECT } from '../utils/sceneImage';
 import { computeSubMenuPlacement } from '../utils/subMenuPlacement';
@@ -377,7 +377,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
       // however far the ring has ticked round).
       const off = outwardOffset(nodes[i], center, demoDistance(l.nodeSize));
       setPulse({ id, dx: off.x, dy: off.y, out: true });
-      playChime();
+      playChime('demo');
       return waitPulse(id, true, DEMO_OUT_MS + 700);
     },
     pulseBack: (id) => {
@@ -395,7 +395,7 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     abort: () => {
       pulseWaiter.current = null;
       setPulse(null);
-      stopChime();
+      stopDemoChime();
       resumeDrift();
     },
   });

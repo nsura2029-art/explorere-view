@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { Backdrop } from '../components/Backdrop';
+import { CrystallineEffectLayer } from '../components/effects/CrystallineEffectLayer';
 import { ImageLayer } from '../components/ImageLayer';
 import { MainRadialMenu } from '../components/MainRadialMenu';
 import { RippleLayer } from '../components/RippleLayer';
@@ -74,6 +75,7 @@ export function App() {
       <ThrowPortals />
       <ImageLayer />
       <ScreensButton />
+      <CrystallineEffectLayer />
     </TouchSurface>
   );
 }

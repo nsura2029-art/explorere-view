@@ -819,6 +819,102 @@ body {
   box-shadow: 0 0 0 1.5px rgba(126, 141, 255, 0.5);
 }
 
+
+/* ---------- crystalline touch/click burst (visual only, above everything) ---------- */
+.crystal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+.crystal-burst {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+/* contact flash: 0.5 → 1.2 → 0 in ~220 ms */
+.crystal-flash {
+  position: absolute;
+  left: -24px;
+  top: -24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #ffffff 0%,
+    rgba(220, 242, 255, 0.95) 22%,
+    rgba(130, 170, 255, 0.5) 48%,
+    rgba(170, 110, 255, 0.18) 62%,
+    transparent 72%
+  );
+  animation: crystal-flash 220ms ease-out both;
+}
+@keyframes crystal-flash {
+  0% { transform: scale(0.5); opacity: 1; }
+  35% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+/* energy wave: ~15 px → ~85 px, fading, in ~420 ms */
+.crystal-wave {
+  position: absolute;
+  left: -50px;
+  top: -50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(205, 228, 255, 0.85);
+  box-shadow:
+    0 0 10px rgba(110, 160, 255, 0.55),
+    inset 0 0 8px rgba(180, 140, 255, 0.35);
+  animation: crystal-wave 420ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes crystal-wave {
+  from { transform: scale(0.15); opacity: 0.9; }
+  to { transform: scale(0.85); opacity: 0; }
+}
+/* particles: all random values arrive as CSS variables fixed at creation */
+.crystal-p {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--size);
+  height: var(--size);
+  color: var(--c);
+  animation: crystal-particle var(--dur) cubic-bezier(0.18, 0.75, 0.3, 1) var(--delay) both;
+  will-change: transform, opacity;
+}
+.crystal-p svg {
+  display: block;
+  overflow: visible;
+}
+.crystal-p--dot {
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, var(--c) 45%, transparent 72%);
+}
+.crystal-p--medium {
+  filter: drop-shadow(0 0 3px var(--c));
+}
+/* large feature stars: white/icy core with a blue/purple glow, a brighter pop */
+.crystal-p--large {
+  filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 7px var(--glow));
+  animation-name: crystal-feature;
+}
+@keyframes crystal-particle {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r0)) scale(0.2); }
+  14% { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.12), calc(-50% + var(--dy) * 0.12)) rotate(var(--r0)) scale(1); }
+  60% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--r1)) scale(var(--s1)); }
+}
+@keyframes crystal-feature {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r0)) scale(0.2); }
+  18% { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.15), calc(-50% + var(--dy) * 0.15)) rotate(var(--r0)) scale(1.3); }
+  38% { transform: translate(calc(-50% + var(--dx) * 0.4), calc(-50% + var(--dy) * 0.4)) rotate(var(--r0)) scale(1); }
+  65% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--r1)) scale(var(--s1)); }
+}
+
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .star,
