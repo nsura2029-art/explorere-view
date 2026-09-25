@@ -5,6 +5,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ## [Unreleased]
 
+### Changed
+- **New tap sound: original "ice tap"** (~1 s instead of the 3 s chime), shaped like the burst:
+  glassy contact tink → cascade of tiny ice pings → shimmering bell highlight → frosty tail that
+  fades with the particles by ~0.9 s. Five variations (`src/assets/sounds/ice-tap-1..5.mp3`),
+  a random one per tap, never the same twice in a row; still one at a time, mute unchanged.
+  Fully synthetic and reproducible: `scripts/generate_ice_tap.py` (numpy/scipy/ffmpeg); shape
+  vs. the visual timeline in `docs/ice-tap-preview.png`. The original
+  `docs/original_crystalline_touch_3s.mp3` is kept but no longer used.
+
 ### Added
 - Vercel deploy config: `vercel.json` (Vite, `npm ci`, `npm run build`, `dist`, immutable caching
   for hashed assets), `engines.node >=20.19`, `docs/DEPLOY.md` (connect, branch previews,
