@@ -5,7 +5,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- Vercel deploy config: `vercel.json` (Vite, `npm ci`, `npm run build`, `dist`, immutable caching
+  for hashed assets), `engines.node >=20.19`, `docs/DEPLOY.md` (connect, branch previews,
+  sharing/protection, fixed preview domain, production branch).
 
 ## 2026-09-25 — `feature/subitem-rotate` (continued)
 

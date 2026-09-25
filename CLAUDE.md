@@ -27,6 +27,11 @@ npm run build      # typecheck + production build to dist/
 
 Display window for an external screen: `http://localhost:5173/?view=display`.
 
+Deploy: Vercel from GitHub (`vercel.json`, `engines.node >=20.19`); every pushed branch gets a
+preview. Steps and sharing options: `docs/DEPLOY.md`. On Windows, stop `npm run dev` before
+`npm ci` (the dev server locks `esbuild.exe`; the user runs it in a VS Code terminal — ask
+before stopping it).
+
 ## Git workflow
 
 - Branches: `main` (stable), `develop` (integration), `feature/*` (work). Current work:
@@ -149,8 +154,9 @@ docs (README, LOCAL_SETUP, this file, CHANGELOG). Unit tests: 160 passing.
 2. Real-hardware checks the pane cannot do: live animation feel and smoothness, sound sync,
    first-touch audio, multi-finger taps and pinch on the actual touchscreen (spec QG-6), two 32"
    screens (Window Management permission, fullscreen hand-off, throw directions).
-3. Public deploy: the user was setting up Vercel (production branch in Settings → Environments →
-   Production → Branch Tracking). Status unknown — ask.
+3. Vercel: repo is deploy-ready (`vercel.json`, `docs/DEPLOY.md`). Dashboard steps are the
+   user's (connect repo, find the `feature/subitem-rotate` preview, Deployment Protection for
+   sharing). Ask for the preview URL to verify it.
 4. Kiosk launch: document/verify Chrome flags (`--kiosk`, `--autoplay-policy=no-user-gesture-required`).
 
 ### Known limitations
