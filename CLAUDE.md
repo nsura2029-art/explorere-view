@@ -167,11 +167,9 @@ multi-screen throw, drift intro, idle demo with ring glides, crystalline burst, 
 docs (README, LOCAL_SETUP, this file, CHANGELOG). Unit tests: 160 passing.
 
 ### Pending / next
-0. **Uncommitted on `feature/subitem-rotate` (2026-09-27):** the 4 feedback fixes — demo always
-   opens the pulsed item's own submenu (ring still during pulse+preview), ring rotation as smooth
-   demo glides (clock ticks removed), calm 0.7–1.1 s tap-to-move / split-view glide, 16–40 tiny
-   stars. Typecheck, 161 tests, build pass; browser-verified. The user is testing locally —
-   on their OK: commit + push (they redeploy the Vercel preview themselves).
+0. **Just committed `63c7386` (2026-09-27):** the 4 feedback fixes (demo same-item submenu, smooth
+   ring glides, calm tap glide, 16–40 tiny stars). Ask the user for their local / Vercel test
+   results and fix anything they report.
 1. Merge `feature/subitem-rotate` → `develop` (again) → `main` when the user asks (fast-forward
    so far; `develop` at `986f43e`, `main` at `6e35ae9`).
 2. Real-hardware checks the pane cannot do: live animation feel and smoothness, sound sync,

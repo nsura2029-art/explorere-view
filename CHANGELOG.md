@@ -5,12 +5,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ## [Unreleased]
 
-### Fixed
+Nothing yet.
+
+## 2026-09-27 — `feature/subitem-rotate`
+
+### `63c7386` Demo fixes, smooth ring glides, calm tap glide, more stars
+
+#### Fixed
 - **Idle demo showed another item's submenu:** the ring could tick round between an item's pulse
   and its submenu preview. The ring now holds still for the whole pulse + preview, so the item
   that pulses is always the one whose submenu opens.
 
-### Changed
+#### Changed
 - **Ring rotation is a smooth glide inside the idle demo** (2–3 slots forward ≈2 s, then 1–2 back
   ≈0.8–1.4 s, random, alternating), replacing the separate 1-per-second clock ticks (removed:
   `hooks/useClockTicks.ts`). An interruption settles a glide quickly at its slot.
