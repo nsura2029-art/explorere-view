@@ -17,7 +17,7 @@ History: [CHANGELOG.md](CHANGELOG.md) · Agent/maintainer brief (context, decisi
 | 5 | Collapsible submenus, outside-tap collapse, edge-aware submenu placement | done |
 | 6 | Sub item → image card; drag to detach and move freely | done |
 | 7 | Throw image cards to external screens (full-screen display windows) | done |
-| 8 | Rotate modes (main + submenu), clock ticks, pinch/double-tap zoom, image tray + split view | done |
+| 8 | Rotate modes (main + submenu), ring rotation, pinch/double-tap zoom, image tray + split view | done |
 | 9 | Idle attract demo, crystalline touch burst, tap-only chime + mute button | done |
 | — | Real touchscreen gate (QG-6) + two 32" screens on target hardware | pending |
 
@@ -28,14 +28,16 @@ History: [CHANGELOG.md](CHANGELOG.md) · Agent/maintainer brief (context, decisi
   until the first touch. The first touch stops it where it is (or glides it fully into view if it
   was still coming in); after that it only "breathes".
 - **Idle demo (attract loop):** 2 s after loading, and again after 8–12 s without any touch, the
-  menu shows itself off (silently): a random main item (never the same one twice in a row) glides
-  straight out from the menu center while growing to 2× with a little extra glow, holds ~0.4 s,
-  glides back to exactly its place and size; 1–2 s later that item's submenu opens for 1–2 s and
-  collapses; 1–2 s later the next item. Any touch, click or key stops it instantly (the item glides
+  menu shows itself off (silently), one step at a time: the ring of items **glides smoothly**
+  2–3 slots clockwise (≈2 s; next time 1–2 slots back, alternating, random amounts); then a random
+  main item (never the same one twice in a row) glides straight out from the menu center while
+  growing to 2× with a little extra glow, holds ~0.4 s, glides back to exactly its place and size;
+  1–2 s later **that same item's** submenu opens for 1–2 s and collapses (the ring holds still for
+  the whole pulse + preview); then the next glide. Any touch, click or key stops it instantly (the item glides
   home) and the touch is handled as usual; a submenu it was showing stays open for the user.
   Disabled with the system "reduce motion" setting.
 - **Crystalline touch burst (every touch/click, anywhere):** exactly under the finger or cursor —
-  a bright contact flash, a soft energy ring, then 8–20 tiny sparkles, 3–5 medium stars and 1–2
+  a bright contact flash, a soft energy ring, then 16–40 tiny sparkles, 3–5 medium stars and 1–2
   large white/icy four-point feature stars radiate outward in white/blue/purple/magenta and fade
   within ~1 s. Purely visual (`pointer-events: none`): menus, ripples, dragging and zoom behave
   exactly as before. Each finger gets its own burst; at most 8 bursts at once.
@@ -50,13 +52,10 @@ History: [CHANGELOG.md](CHANGELOG.md) · Agent/maintainer brief (context, decisi
 - **Mute button** (speaker, just left of "Open screens"): mutes every chime; the choice is
   remembered across reloads. Turning sound back on plays one confirmation chime.
 - **Tap empty space:** a water ripple appears at the exact touch point and the menu glides there
-  (clamped so it never leaves the screen). Extra simultaneous fingers only ripple.
+  (clamped so it never leaves the screen) in a calm 0.7–1.1 s glide (longer trips take a little
+  longer). Extra simultaneous fingers only ripple.
 - **Drag** the hub, an item or the ring with one finger (10 px threshold) to move the menu; a drag never
   activates an item.
-- **Item ring clock (idle only):** on load, and again after **15 s without any touch**, the ring of
-  main items ticks round like a seconds hand, one slot per second: 2–3 ticks clockwise, a beat, 1–2
-  ticks back (random each cycle). Any touch stops it. Labels stay upright and the hub stays still.
-  It never ticks while a submenu is open.
 - **Double-tap an item → rotate mode:** the hub shows *ROTATE · drag to turn* and the ring glows.
   Drag around the menu to turn the ring clockwise or anticlockwise (a flick keeps spinning, up to 4
   slots, and snaps to the nearest slot). Double-tap-and-drag in one motion also works. Leave rotate
@@ -88,7 +87,7 @@ History: [CHANGELOG.md](CHANGELOG.md) · Agent/maintainer brief (context, decisi
   between the top-right screen info ("Open screens") and the tray. Whenever the tray has images or
   the active image is zoomed in (≈15% past its default size), the active image lives in the
   **right half** and the main menu plus any open submenu dock in the **left half**, shrinking just
-  enough to fit (a tap on empty space then only closes the submenu). With no tray and no zoom, the
+  enough to fit, in the same calm glide (a tap on empty space then only closes the submenu). With no tray and no zoom, the
   menus return to full size. Attached images close with their submenu; detached ones stay.
 
 ## External screens (throw to display)
@@ -162,7 +161,7 @@ Menu motion is layered: **anchor** (x/y motion values, no re-render on move) →
 (the anchor is driven by the **drift** until first touch, `motionPhase === 'wandering'`,
 `utils/wander.ts`) → **move scale** (compress before a
 tap-move, pop on arrival) → **breath** (idle loop, only while `motionPhase === 'idle'`) → **rotor**
-(item ring only, clock ticks from `ringStep`; items counter-rotate).
+(item ring only, rotated from `ringStep` — demo glides, rotate mode; items counter-rotate).
 
 Note: the spec (3.1) asks for the menu to appear near the center; per stakeholder feedback it
 instead drifts in from the bottom-left and roams the window until the first interaction.

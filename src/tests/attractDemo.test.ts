@@ -3,7 +3,10 @@ import {
   DEMO_PAUSE_MS,
   DEMO_RESTART_MS,
   demoDistance,
+  glideDurationMs,
+  nextRotation,
   outwardOffset,
+  rotateDurationMs,
   pickDemoItem,
   randomBetween,
 } from '../utils/attractDemo';
@@ -84,5 +87,33 @@ describe('demo distances and timing', () => {
       expect(v).toBeGreaterThanOrEqual(8000);
       expect(v).toBeLessThanOrEqual(12000);
     }
+  });
+});
+
+describe('ring rotation inside the demo', () => {
+  it('goes 2–3 slots forward, 1–2 slots back (random amounts)', () => {
+    const fwd = new Set<number>();
+    const back = new Set<number>();
+    for (let i = 0; i < 300; i++) {
+      fwd.add(nextRotation(true));
+      back.add(nextRotation(false));
+    }
+    expect([...fwd].sort((a, b) => a - b)).toEqual([2, 3]);
+    expect([...back].sort((a, b) => a - b)).toEqual([-2, -1]);
+  });
+
+  it('is a smooth glide: about 2 s for 3 slots, under 1 s for 1 slot', () => {
+    expect(rotateDurationMs(3)).toBeGreaterThanOrEqual(1800);
+    expect(rotateDurationMs(3)).toBeLessThanOrEqual(2200);
+    expect(rotateDurationMs(-1)).toBeGreaterThanOrEqual(700);
+    expect(rotateDurationMs(-1)).toBeLessThanOrEqual(1000);
+  });
+});
+
+describe('tap-to-move glide', () => {
+  it('takes 0.7–1.1 s, a little longer for longer trips', () => {
+    expect(glideDurationMs(0)).toBe(700);
+    expect(glideDurationMs(300)).toBeGreaterThan(glideDurationMs(100));
+    expect(glideDurationMs(5000)).toBe(1100);
   });
 });

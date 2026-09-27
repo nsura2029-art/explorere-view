@@ -39,7 +39,7 @@ type Spec = { count: Range; px: Range; distance: Range; delay: Range; duration: 
 
 /** Per-size recipe: counts, sizes (px), travel (px) and timing (ms) as specified. */
 export const PARTICLE_SPECS: Record<ParticleSize, Spec> = {
-  small: { count: [8, 20], px: [3, 8], distance: [20, 70], delay: [20, 60], duration: [560, 820], scaleEnd: [0.7, 1.15] },
+  small: { count: [16, 40], px: [3, 8], distance: [20, 70], delay: [20, 60], duration: [560, 820], scaleEnd: [0.7, 1.15] },
   medium: { count: [3, 5], px: [10, 18], distance: [35, 90], delay: [50, 120], duration: [620, 860], scaleEnd: [1, 1.25] },
   large: { count: [1, 2], px: [22, 35], distance: [40, 110], delay: [80, 180], duration: [640, 820], scaleEnd: [1.05, 1.3] },
 };
@@ -89,7 +89,7 @@ export type BurstOptions = {
   reduced?: boolean;
 };
 
-/** Creates one burst's particles (8–20 small, 3–5 medium, 1–2 large). */
+/** Creates one burst's particles (16–40 small, 3–5 medium, 1–2 large). */
 export function createCrystallineParticles(rnd: () => number = Math.random, options: BurstOptions = {}): Particle[] {
   const particles: Particle[] = [];
   let id = 0;

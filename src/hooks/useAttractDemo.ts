@@ -4,11 +4,14 @@ import {
   DEMO_PAUSE_MS,
   DEMO_RESTART_MS,
   DEMO_START_DELAY_MS,
+  nextRotation,
   randomBetween,
 } from '../utils/attractDemo';
 import { activePointerCount } from '../utils/pointerRegistry';
 
 export type AttractDemoApi = {
+  /** Smoothly turns the ring by `slots` (+ clockwise); resolves once it has settled. */
+  rotate: (slots: number) => Promise<void>;
   /** A random main item id, never `exclude` when another is available. */
   pick: (exclude: string | null) => string | null;
   /** Item grows and moves outward (silently); resolves when it arrived. */
@@ -17,13 +20,13 @@ export type AttractDemoApi = {
   pulseBack: (id: string) => Promise<void>;
   openSubmenu: (id: string) => void;
   closeSubmenu: () => void;
-  /** Stop right now: item back to rest. Must not touch what the user is doing. */
+  /** Stop right now: item back to rest, ring settled. Must not touch what the user is doing. */
   abort: () => void;
 };
 
 /**
- * Idle "attract" demo for the menu:
- * pick a random item → pulse it out (2×, outward) → hold → back → pause → show its
+ * Idle "attract" demo for the menu (one step at a time, nothing overlaps):
+ * glide the ring 2–3 slots forward (or 1–2 back, alternating) → pause → pick a random item → pulse it out (2×, outward) → hold → back → pause → show its
  * submenu → pause → collapse → pause → next item (never the same one twice in a row).
  * Any touch, click or key stops it at once; it restarts after 8–12 s with no interaction.
  */
@@ -36,6 +39,7 @@ export function useAttractDemo(enabled: boolean, api: AttractDemoApi) {
     let gen = 0;
     let running = false;
     let last: string | null = null;
+    let forward = true;
     let restartTimer = 0;
     const timers = new Set<number>();
 
@@ -54,6 +58,13 @@ export function useAttractDemo(enabled: boolean, api: AttractDemoApi) {
       const alive = () => g === gen;
       await sleep(firstDelay);
       while (alive()) {
+        // The ring turns first, on its own; it then holds still for the whole pulse + preview,
+        // so the item that pulses is exactly the one whose submenu opens.
+        await apiRef.current.rotate(nextRotation(forward));
+        forward = !forward;
+        if (!alive()) return;
+        await pause();
+        if (!alive()) return;
         const a = apiRef.current;
         const id = a.pick(last);
         if (!id) break;

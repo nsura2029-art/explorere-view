@@ -44,7 +44,7 @@ A browser-only front-end app: no backend, database or cloud service. Everything 
 | `src/components` | Menu, submenu, ripples, image cards, screen badges, "Open screens" button; `effects/` holds the crystalline touch burst. |
 | `src/display` | The display window shown on an external screen (`?view=display`). |
 | `src/displays` | Controller ↔ display link, opening screens, throw maths. |
-| `src/hooks` | Tap-vs-drag recognizer, double tap, ring spin (rotate mode), clock ticks, idle timer, viewport size. |
+| `src/hooks` | Tap-vs-drag recognizer, double tap, ring spin (rotate mode + demo glides), idle demo, idle timer, tap sound, viewport size. |
 | `src/store` | Zustand store. |
 | `src/utils` | Pure geometry: radial layout, clamping, submenu/card placement, spin maths, intro drift. |
 | `src/tests` | Vitest unit tests. |
@@ -127,11 +127,11 @@ controller finds them by itself; the top-right button shows how many screens are
 | Gesture | Result |
 |---|---|
 | (page load) | the menu drifts in from the bottom-left and roams the window until you touch |
-| (no touch for 8–12 s, or 2 s after load) | idle demo (silent): a random item pulses out (2×) and back, then its submenu opens briefly; any touch stops it |
+| (no touch for 8–12 s, or 2 s after load) | idle demo (silent): the ring glides 2–3 slots forward (or 1–2 back), a random item pulses out (2×) and back, then that item's submenu opens briefly; any touch stops it |
 | Any touch or click | crystalline burst exactly at the finger / cursor (visual only) |
 | Tap / click / pen tap / long press (released without moving) | crystalline chime (not for drags, pinches, ×, "Open screens" or the mute button) |
 | Speaker button (left of "Open screens") | mute / unmute all sound (remembered) |
-| Tap empty space | ripple + the menu glides there |
+| Tap empty space | ripple + the menu glides there (calm 0.7–1.1 s glide) |
 | Drag hub / item / ring | move the menu |
 | Tap an item | open its submenu (tap again to close) |
 | Double-tap an item | rotate mode: drag around the menu to turn the ring (either direction) |
@@ -144,7 +144,6 @@ controller finds them by itself; the top-right button shows how many screens are
 | Tap a thumbnail | bring it back as the active image |
 | Zoom an image in | split view: image on the right half (max 50% width, between the screen info and the tray), menus docked on the left half |
 | Flick an image toward a screen | send it to that screen, full screen |
-| No touch for 15 s | the ring ticks round like a clock |
 
 ## 9. Troubleshooting
 

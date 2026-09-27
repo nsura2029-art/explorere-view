@@ -28,8 +28,14 @@ export function useRingSpin({ angle, slotDeg, step, setStep, reduceMotion, settl
   opts.current = { slotDeg, step, setStep, reduceMotion, settle };
   // Transition for the next step change (a spin hands over its momentum); `settle` otherwise.
   const pending = useRef<Transition | null>(null);
+  // A step already being animated by `glide` (the effect must not restart it).
+  const gliding = useRef<number | null>(null);
 
   useEffect(() => {
+    if (gliding.current === step) {
+      gliding.current = null;
+      return;
+    }
     const t = pending.current ?? opts.current.settle;
     pending.current = null;
     animate(angle, step * slotDeg, opts.current.reduceMotion ? { duration: 0 } : t);
@@ -44,6 +50,24 @@ export function useRingSpin({ angle, slotDeg, step, setStep, reduceMotion, settl
   return useMemo(() => {
     const at = (p: Point) => (Math.atan2(p.y - drag.current.center.y, p.x - drag.current.center.x) * 180) / Math.PI;
     return {
+      /**
+       * Smoothly turns the ring to `step` with `transition`; resolves when it has settled.
+       * The committed step changes at once (layout maths follow the target).
+       */
+      glide(step: number, transition: Transition): Promise<void> {
+        const o = opts.current;
+        angle.stop();
+        if (step !== o.step) gliding.current = step;
+        o.setStep(step);
+        const done = animate(angle, step * o.slotDeg, o.reduceMotion ? { duration: 0 } : transition);
+        return new Promise<void>((resolve) => done.then(() => resolve(), () => resolve()));
+      },
+      /** Finish any glide right away (quickly, never a jump) at the committed step. */
+      settleNow() {
+        const o = opts.current;
+        angle.stop();
+        animate(angle, o.step * o.slotDeg, o.reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 40 });
+      },
       /** Drag started: `center` is the ring center, `from` the press point, `to` the finger now. */
       begin(center: Point, from: Point, to: Point) {
         angle.stop();

@@ -11,7 +11,6 @@ import {
 } from 'framer-motion';
 import { MAIN_MENU_ITEMS, TONE_COLORS, type SubMenuItem } from '../data/menuData';
 import { useAttractDemo } from '../hooks/useAttractDemo';
-import { useClockTicks } from '../hooks/useClockTicks';
 import { useDoubleTap } from '../hooks/useDoubleTap';
 import { useIdle } from '../hooks/useIdle';
 import { usePointerDrag } from '../hooks/usePointerDrag';
@@ -31,6 +30,8 @@ import {
   DEMO_OUT_MS,
   DEMO_SCALE,
   demoDistance,
+  glideDurationMs,
+  rotateDurationMs,
   outwardOffset,
   pickDemoItem,
 } from '../utils/attractDemo';
@@ -51,6 +52,8 @@ const BREATH_S = 3.2;
 /** "Attracted to touch" move: near-critically damped so it never overshoots into an edge. */
 const MOVE_SPRING: Transition = { type: 'spring', stiffness: 260, damping: 30, mass: 1, restDelta: 0.5 };
 const MOVE_REDUCED: Transition = { duration: 0.22, ease: 'easeOut' };
+/** Calm "drawn toward the touch" glide: eases in gently, settles softly. */
+const GLIDE_EASE = [0.33, 0, 0.2, 1] as const;
 
 const REVEAL_FULL = {
   initial: { opacity: 0, scale: 0.82, y: 12, filter: 'blur(8px)' },
@@ -172,7 +175,8 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     moveScale.set(1);
   }, [x, y, moveScale]);
 
-  // Apply every committed position: instant for drag/resize, attract spring for taps.
+  // Apply every committed position: instant for drag/resize, a calm glide for taps on empty
+  // space and image-driven moves (split view), the quicker spring for small submenu nudges.
   useEffect(() => {
     const { menuPosition: p, moveKind, motionPhase: phase } = useExplorerStore.getState();
     if (!p) return;
@@ -188,7 +192,11 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     const reduced = latest.current.reduceMotion;
     setMotionPhase('moving');
     if (!reduced) animate(moveScale, 0.96, { duration: 0.12, ease: 'easeOut' });
-    const t = reduced ? MOVE_REDUCED : MOVE_SPRING;
+    const t: Transition = reduced
+      ? MOVE_REDUCED
+      : moveKind === 'glide'
+        ? { duration: glideDurationMs(Math.hypot(p.x - x.get(), p.y - y.get())) / 1000, ease: GLIDE_EASE }
+        : MOVE_SPRING;
     Promise.all([animate(x, p.x, t), animate(y, p.y, t)]).then(() => {
       if (token !== moveToken.current) return;
       if (!reduced) animate(moveScale, [moveScale.get(), 1.03, 1], { duration: 0.36, times: [0, 0.4, 1], ease: 'easeOut' });
@@ -211,7 +219,10 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   useEffect(() => {
     const s = useExplorerStore.getState();
     const { layout: l, viewport: vp, reduceMotion: rm } = latest.current;
-    const t = rm ? MOVE_REDUCED : MOVE_SPRING;
+    const glideFor = (to: Point) =>
+      rm
+        ? MOVE_REDUCED
+        : ({ duration: glideDurationMs(Math.hypot(to.x - x.get(), to.y - y.get())) / 1000, ease: GLIDE_EASE } as Transition);
     if (docked) {
       // Don't yank the menu away from a finger that is dragging it.
       if (s.interactionMode === 'dragging') return;
@@ -224,24 +235,21 @@ export function MainRadialMenu({ layout, viewport }: Props) {
         box.maxY = Math.max(box.maxY, subMenu.center.y + e);
       }
       const fit = fitMenusInRegion(box, menuSplitRegion(vp, EDGE_MARGIN));
-      animate(compactScale, fit.scale, t);
+      animate(compactScale, fit.scale, glideFor(fit.center));
       s.setMenuScale(fit.scale);
-      s.setMenuPosition(fit.center, 'spring');
+      s.setMenuPosition(fit.center, 'glide');
     } else if (s.menuScale !== 1 || compactScale.get() !== 1) {
-      animate(compactScale, 1, t);
       s.setMenuScale(1);
       if (s.menuPosition) {
-        s.setMenuPosition(
-          clampMenuPosition({ desiredPosition: s.menuPosition, viewport: vp, menuRadius: l.extent, margin: EDGE_MARGIN }),
-          'spring',
-        );
-      }
+        const to = clampMenuPosition({ desiredPosition: s.menuPosition, viewport: vp, menuRadius: l.extent, margin: EDGE_MARGIN });
+        animate(compactScale, 1, glideFor(to));
+        s.setMenuPosition(to, 'glide');
+      } else animate(compactScale, 1, glideFor({ x: x.get(), y: y.get() }));
     }
-  }, [docked, subMenu, viewport, layout, compactScale]);
+  }, [docked, subMenu, viewport, layout, compactScale, x, y]);
 
-  // The clock ticking runs only after 15 s without any touch (and from load until the first touch),
-  // and never with a submenu open, in rotate mode or under a finger, so submenus and image
-  // tethers always line up with their item.
+  // After 15 s without any touch, leave the rotate modes. (Ring rotation itself is a step of the
+  // idle demo, so it never overlaps a pulse or a submenu preview.)
   const idle = useIdle();
   useEffect(() => {
     if (!idle) return;
@@ -251,15 +259,6 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   }, [idle]);
   // Idle demo: which item is pulsing (outward + 2×) right now, if any.
   const [pulse, setPulse] = useState<ItemPulse | null>(null);
-  const ticking =
-    idle &&
-    pulse === null &&
-    !reduceMotion &&
-    !spinMode &&
-    (motionPhase === 'idle' || motionPhase === 'wandering') &&
-    activeMainItemId === null &&
-    interactionMode === 'idle';
-  useClockTicks(ticking, useExplorerStore.getState().stepRing);
 
   const { extent, ringRadius, nodeSize, hubSize } = layout;
   const stage = extent * 2;
@@ -345,6 +344,15 @@ export function MainRadialMenu({ layout, viewport }: Props) {
   };
 
   useAttractDemo(!reduceMotion, {
+    rotate: (slots) => {
+      const s = useExplorerStore.getState();
+      s.setSpinMode(false);
+      s.setSubSpinMode(false);
+      const ms = rotateDurationMs(slots);
+      const glide = ringSpin.glide(s.ringStep + slots, { duration: ms / 1000, ease: 'easeInOut' });
+      // Timer fallback so the sequence never stalls if a frame is missed.
+      return Promise.race([glide, new Promise<void>((r) => window.setTimeout(r, ms + 400))]);
+    },
     pick: (exclude) => {
       const s = useExplorerStore.getState();
       const { layout: l, viewport: vp } = latest.current;
@@ -394,6 +402,8 @@ export function MainRadialMenu({ layout, viewport }: Props) {
     abort: () => {
       pulseWaiter.current = null;
       setPulse(null);
+      // A glide in progress finishes quickly at its slot, so taps land on the right items.
+      ringSpin.settleNow();
       resumeDrift();
     },
   });

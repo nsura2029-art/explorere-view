@@ -63,7 +63,7 @@ export function App() {
       s.closeSubMenu();
       s.setMenuPosition(
         clampMenuPosition({ desiredPosition: { x, y }, viewport, menuRadius: layout.extent, margin: EDGE_MARGIN }),
-        'spring',
+        'glide',
       );
     },
     [viewport, layout.extent],

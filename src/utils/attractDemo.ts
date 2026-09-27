@@ -12,6 +12,25 @@ export const DEMO_RESTART_MS: [number, number] = [8000, 12000];
 /** The pulsing item grows to this scale. */
 export const DEMO_SCALE = 2;
 
+/**
+ * Ring rotation inside the demo: a smooth glide of 2–3 slots forward, then 1–2 slots back,
+ * alternating (random amounts). Nothing else moves while it glides.
+ */
+export const ROTATE_FORWARD: [number, number] = [2, 3];
+export const ROTATE_BACK: [number, number] = [1, 2];
+/** Glide duration: 3 slots ≈ 2 s, 1 slot ≈ 0.8 s. */
+export const rotateDurationMs = (slots: number) => 250 + 580 * Math.abs(slots);
+
+/** Next rotation in slots: positive (clockwise) when `forward`, negative when going back. */
+export function nextRotation(forward: boolean, rnd: () => number = Math.random): number {
+  const [lo, hi] = forward ? ROTATE_FORWARD : ROTATE_BACK;
+  const n = Math.min(hi, lo + Math.floor(rnd() * (hi - lo + 1)));
+  return forward ? n : -n;
+}
+
+/** Tap-to-move glide: calm, a little longer for longer trips (0.7–1.1 s). */
+export const glideDurationMs = (distancePx: number) => Math.min(1100, Math.max(700, 700 + distancePx * 0.4));
+
 export const randomBetween = ([lo, hi]: [number, number], rnd: () => number = Math.random) => lo + rnd() * (hi - lo);
 
 /** How far the pulsing item travels outward: proportional to the node, kept within 50–100 px. */

@@ -5,7 +5,28 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ## [Unreleased]
 
+### Fixed
+- **Idle demo showed another item's submenu:** the ring could tick round between an item's pulse
+  and its submenu preview. The ring now holds still for the whole pulse + preview, so the item
+  that pulses is always the one whose submenu opens.
+
 ### Changed
+- **Ring rotation is a smooth glide inside the idle demo** (2–3 slots forward ≈2 s, then 1–2 back
+  ≈0.8–1.4 s, random, alternating), replacing the separate 1-per-second clock ticks (removed:
+  `hooks/useClockTicks.ts`). An interruption settles a glide quickly at its slot.
+- **Calmer tap-to-move:** the menu glides to a tap on empty space in 0.7–1.1 s (was ≈0.45 s);
+  the same glide for split-view dock/undock caused by images (open, zoom, tray, close).
+- **Twice as many tiny stars** in the touch burst: 16–40 (was 8–20); nothing else changed.
+
+## 2026-09-27 — merge
+
+- `develop` fast-forwarded to `986f43e` (everything below, from `feature/subitem-rotate`).
+
+## 2026-09-25 — `feature/subitem-rotate` (continued)
+
+### `986f43e` Original ice-tap sound
+
+#### Changed
 - **New tap sound: original "ice tap"** (~1 s instead of the 3 s chime), shaped like the burst:
   glassy contact tink → cascade of tiny ice pings → shimmering bell highlight → frosty tail that
   fades with the particles by ~0.9 s. Five variations (`src/assets/sounds/ice-tap-1..5.mp3`),
@@ -14,12 +35,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
   vs. the visual timeline in `docs/ice-tap-preview.png`. The original
   `docs/original_crystalline_touch_3s.mp3` is kept but no longer used.
 
-### Added
+### `e8d1bcc` Vercel deploy config
+
+#### Added
 - Vercel deploy config: `vercel.json` (Vite, `npm ci`, `npm run build`, `dist`, immutable caching
   for hashed assets), `engines.node >=20.19`, `docs/DEPLOY.md` (connect, branch previews,
   sharing/protection, fixed preview domain, production branch).
-
-## 2026-09-25 — `feature/subitem-rotate` (continued)
 
 ### `0a7604f` Tap-only chime, mute button, docs
 

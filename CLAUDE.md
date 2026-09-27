@@ -35,7 +35,8 @@ before stopping it).
 ## Git workflow
 
 - Branches: `main` (stable), `develop` (integration), `feature/*` (work). Current work:
-  `feature/subitem-rotate` (branched from `develop` at `6e35ae9`), pushed to
+  `feature/subitem-rotate`; `develop` was fast-forwarded to it at `986f43e` (2026-09-27); `main`
+  is still at `6e35ae9`. The user's Vercel preview follows `feature/subitem-rotate`. Pushed to
   `origin` = https://github.com/nsura2029-art/explorere-view.
 - **Commit / push / merge only when the user asks.** The user usually says "yes please" / "go"
   to a proposed plan that includes committing.
@@ -44,6 +45,14 @@ before stopping it).
 - Windows checkout: "LF will be replaced by CRLF" warnings are harmless.
 - The user commits assets themselves sometimes (e.g. the mp3) — check `git status` before
   committing and ask about files you did not create.
+
+## Chat workflow rule (user-agreed)
+
+- **One chat per feature** (or per feedback round). Start a new chat for the next feature.
+- At the start: read this file (and `CHANGELOG.md` if history matters), then confirm the task.
+- At the end of each feature: update **this file** (Status: completed / pending / uncommitted)
+  and **`CHANGELOG.md`**, commit + push when the user agrees, and give the user a ready-to-paste
+  prompt for the next chat.
 
 ## How the user works
 
@@ -62,8 +71,8 @@ src/
                             ripples, activity time, split view (focusCardId, menuScale)
   components/
     TouchSurface            full-screen surface; background presses; activity tracking
-    MainRadialMenu          main menu: drift intro, position springs, reveal/breath layers, rotor
-                            (clock ticks + rotate mode), gestures, submenu open, dock in split
+    MainRadialMenu          main menu: drift intro, position glides/springs, reveal/breath layers,
+                            rotor (demo glides + rotate mode), gestures, submenu open, dock in split
                             view, idle demo wiring
     MainMenuItem            item orb (+ demo pulse animation)
     SubRadialMenu           submenu (scaled twin), its rotate mode, open/close transition
@@ -73,7 +82,7 @@ src/
     ScreensButton, SoundToggle, ThrowPortals, SpinHubLabel, MenuConnectorRing, Backdrop, icons
   hooks/
     usePointerDrag          single-owner tap/drag recognizer (+ velocity, optional pinch)
-    useDoubleTap, useRingSpin, useClockTicks, useIdle, useAttractDemo, useTapChime, useViewport
+    useDoubleTap, useRingSpin (glide/settle/spin), useIdle, useAttractDemo, useTapChime, useViewport
   utils/                    pure, unit-tested maths: radialGeometry, clampPosition, menuLayout,
                             subMenuPlacement, cardPlacement (split/tray), spinMath, wander,
                             attractDemo, createCrystallineParticles, tapSound, sceneImage (SVG
@@ -86,7 +95,8 @@ src/
 
 Key mechanics:
 - Menu center lives in Framer motion values (`x`, `y`) on `.menu-anchor`; the store's
-  `menuPosition` is the committed target (`moveKind` jump/spring). During the drift intro
+  `menuPosition` is the committed target (`moveKind`: jump = drag/resize, glide = calm 0.7–1.1 s
+  for taps on empty space and split-view dock/undock, spring = quick submenu-fit nudge). During the drift intro
   (`motionPhase === 'wandering'`) the drift owns the position.
 - Layers inside the anchor: reveal → move-scale → breathing → rotor (items counter-rotate).
 - Gestures: every interactive element uses `usePointerDrag` (stops propagation, pointer
@@ -100,14 +110,18 @@ Key mechanics:
 ## Decisions (user-approved, override the spec)
 
 - Intro: drift in from bottom-left, roam until first touch (bounce was replaced).
-- Clock-tick ring rotation only after 15 s idle; double-tap an item = rotate mode (main and
+- Ring rotation happens only as a step of the idle demo (smooth glide, 2–3 slots forward then 1–2
+  back, random, alternating); the old 1-per-second clock ticks were removed. Double-tap an item = rotate mode (main and
   submenu); single tap waits 300 ms (double-tap window).
 - Submenu = main menu at 84%, outer circles never overlap, longer bridge.
 - Images: tap sub item → image; earlier images go to the tray (max 5); zoom max 50% width,
   between top-right controls and tray; closing a submenu keeps images.
 - Throw images to external screens (full screen there).
-- Idle demo after 8–12 s idle: pulse random item 2× outward, then preview its submenu; any input
-  stops it. **Silent.**
+- Idle demo after 8–12 s idle (2 s after load): ring glide → pulse random item 2× outward → preview
+  **that same item's** submenu (ring holds still meanwhile) → repeat; any input stops it (a glide in
+  progress settles quickly at its slot). **Silent.**
+- Tap-to-move and split-view dock/undock use a calm 0.7–1.1 s glide (user found 0.45 s too fast).
+- Crystalline burst: 16–40 tiny stars (doubled on request), 3–5 medium, 1–2 large.
 - Tap sound = original synthetic "ice tap" (~1 s, 5 random variations, generated by
   `scripts/generate_ice_tap.py`; re-run it to tweak). Never copy or imitate film/franchise audio
   (the user referenced Frozen as a mood only). `docs/original_crystalline_touch_3s.mp3` is unused.
@@ -149,12 +163,17 @@ Key mechanics:
 ### Completed
 Everything in `CHANGELOG.md` (latest commit on `feature/subitem-rotate`: `0a7604f`): radial menu, ripples,
 relocate/drag, submenus (+ rotate), images (detach, pinch/double-tap zoom, tray, split view),
-multi-screen throw, drift intro, clock ticks, idle demo, crystalline burst, tap-only chime + mute,
+multi-screen throw, drift intro, idle demo with ring glides, crystalline burst, tap-only ice-tap sound + mute,
 docs (README, LOCAL_SETUP, this file, CHANGELOG). Unit tests: 160 passing.
 
 ### Pending / next
-1. Merge `feature/subitem-rotate` → `develop` → `main` when the user asks (PR or fast-forward;
-   `main`/`develop` are at `6e35ae9`).
+0. **Uncommitted on `feature/subitem-rotate` (2026-09-27):** the 4 feedback fixes — demo always
+   opens the pulsed item's own submenu (ring still during pulse+preview), ring rotation as smooth
+   demo glides (clock ticks removed), calm 0.7–1.1 s tap-to-move / split-view glide, 16–40 tiny
+   stars. Typecheck, 161 tests, build pass; browser-verified. The user is testing locally —
+   on their OK: commit + push (they redeploy the Vercel preview themselves).
+1. Merge `feature/subitem-rotate` → `develop` (again) → `main` when the user asks (fast-forward
+   so far; `develop` at `986f43e`, `main` at `6e35ae9`).
 2. Real-hardware checks the pane cannot do: live animation feel and smoothness, sound sync,
    first-touch audio, multi-finger taps and pinch on the actual touchscreen (spec QG-6), two 32"
    screens (Window Management permission, fullscreen hand-off, throw directions).

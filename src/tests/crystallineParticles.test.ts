@@ -6,10 +6,10 @@ const bursts = Array.from({ length: RUNS }, () => createCrystallineParticles());
 const bySize = (ps: ReturnType<typeof createCrystallineParticles>, s: ParticleSize) => ps.filter((p) => p.size === s);
 
 describe('crystalline burst composition', () => {
-  it('always has 8–20 small, 3–5 medium and 1–2 large particles', () => {
+  it('always has 16–40 small, 3–5 medium and 1–2 large particles', () => {
     for (const ps of bursts) {
-      expect(bySize(ps, 'small').length).toBeGreaterThanOrEqual(8);
-      expect(bySize(ps, 'small').length).toBeLessThanOrEqual(20);
+      expect(bySize(ps, 'small').length).toBeGreaterThanOrEqual(16);
+      expect(bySize(ps, 'small').length).toBeLessThanOrEqual(40);
       expect(bySize(ps, 'medium').length).toBeGreaterThanOrEqual(3);
       expect(bySize(ps, 'medium').length).toBeLessThanOrEqual(5);
       expect(bySize(ps, 'large').length).toBeGreaterThanOrEqual(1);

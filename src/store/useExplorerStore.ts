@@ -6,8 +6,11 @@ import type { SubMenuPlacement } from '../utils/subMenuPlacement';
 export type InteractionMode = 'idle' | 'pressing' | 'dragging';
 /** Visual lifecycle of the main menu. 'wandering' = pre-interaction drift across the window. */
 export type MotionPhase = 'hidden' | 'revealing' | 'wandering' | 'idle' | 'moving';
-/** How a new menu position is applied: instantly (drag/resize) or with the attract spring (tap). */
-export type MoveKind = 'jump' | 'spring';
+/**
+ * How a new menu position is applied: instantly (drag/resize), a calm glide (taps on empty space,
+ * image-driven split-view moves) or the quicker spring (small submenu nudges).
+ */
+export type MoveKind = 'jump' | 'spring' | 'glide';
 
 /** 'surface' = background touch (under the menu); 'item' = tapped node (drawn above the menu). */
 export type RippleKind = 'surface' | 'item';
