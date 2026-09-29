@@ -31,17 +31,17 @@ export type Particle = {
   duration: number;
 };
 
-/** The whole burst is gone by this time after the touch (ms). */
-export const BURST_MS = 1000;
+/** The whole burst is gone by this time after the touch (ms): a quick pop, then a slow fade. */
+export const BURST_MS = 2400;
 
 type Range = [number, number];
 type Spec = { count: Range; px: Range; distance: Range; delay: Range; duration: Range; scaleEnd: Range };
 
 /** Per-size recipe: counts, sizes (px), travel (px) and timing (ms) as specified. */
 export const PARTICLE_SPECS: Record<ParticleSize, Spec> = {
-  small: { count: [16, 40], px: [3, 8], distance: [20, 70], delay: [20, 60], duration: [560, 820], scaleEnd: [0.7, 1.15] },
-  medium: { count: [3, 5], px: [10, 18], distance: [35, 90], delay: [50, 120], duration: [620, 860], scaleEnd: [1, 1.25] },
-  large: { count: [1, 2], px: [22, 35], distance: [40, 110], delay: [80, 180], duration: [640, 820], scaleEnd: [1.05, 1.3] },
+  small: { count: [32, 80], px: [3, 8], distance: [30, 110], delay: [0, 40], duration: [1300, 2100], scaleEnd: [0.7, 1.15] },
+  medium: { count: [6, 10], px: [10, 18], distance: [50, 140], delay: [20, 90], duration: [1500, 2200], scaleEnd: [1, 1.25] },
+  large: { count: [2, 4], px: [22, 35], distance: [60, 160], delay: [40, 140], duration: [1700, 2250], scaleEnd: [1.05, 1.3] },
 };
 
 /** Theme colors (match the menu's blue / purple / magenta, plus white highlights). */
@@ -89,7 +89,7 @@ export type BurstOptions = {
   reduced?: boolean;
 };
 
-/** Creates one burst's particles (16–40 small, 3–5 medium, 1–2 large). */
+/** Creates one burst's particles (32–80 small, 6–10 medium, 2–4 large). */
 export function createCrystallineParticles(rnd: () => number = Math.random, options: BurstOptions = {}): Particle[] {
   const particles: Particle[] = [];
   let id = 0;

@@ -6,14 +6,14 @@ const bursts = Array.from({ length: RUNS }, () => createCrystallineParticles());
 const bySize = (ps: ReturnType<typeof createCrystallineParticles>, s: ParticleSize) => ps.filter((p) => p.size === s);
 
 describe('crystalline burst composition', () => {
-  it('always has 16–40 small, 3–5 medium and 1–2 large particles', () => {
+  it('always has 32–80 small, 6–10 medium and 2–4 large particles', () => {
     for (const ps of bursts) {
-      expect(bySize(ps, 'small').length).toBeGreaterThanOrEqual(16);
-      expect(bySize(ps, 'small').length).toBeLessThanOrEqual(40);
-      expect(bySize(ps, 'medium').length).toBeGreaterThanOrEqual(3);
-      expect(bySize(ps, 'medium').length).toBeLessThanOrEqual(5);
-      expect(bySize(ps, 'large').length).toBeGreaterThanOrEqual(1);
-      expect(bySize(ps, 'large').length).toBeLessThanOrEqual(2);
+      expect(bySize(ps, 'small').length).toBeGreaterThanOrEqual(32);
+      expect(bySize(ps, 'small').length).toBeLessThanOrEqual(80);
+      expect(bySize(ps, 'medium').length).toBeGreaterThanOrEqual(6);
+      expect(bySize(ps, 'medium').length).toBeLessThanOrEqual(10);
+      expect(bySize(ps, 'large').length).toBeGreaterThanOrEqual(2);
+      expect(bySize(ps, 'large').length).toBeLessThanOrEqual(4);
     }
   });
 
@@ -29,7 +29,7 @@ describe('crystalline burst composition', () => {
     }
   });
 
-  it('appears in waves (small, then medium, then large) and is gone within 1 s', () => {
+  it('appears in waves (small, then medium, then large) and is gone within BURST_MS', () => {
     for (const ps of bursts) {
       for (const p of ps) {
         const [lo, hi] = PARTICLE_SPECS[p.size].delay;

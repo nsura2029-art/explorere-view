@@ -865,13 +865,13 @@ body {
   width: 0;
   height: 0;
 }
-/* contact flash: 0.5 → 1.2 → 0 in ~220 ms */
+/* contact flash: 0.5 → 1.3 → 0 in ~300 ms */
 .crystal-flash {
   position: absolute;
-  left: -24px;
-  top: -24px;
-  width: 48px;
-  height: 48px;
+  left: -32px;
+  top: -32px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -881,14 +881,14 @@ body {
     rgba(170, 110, 255, 0.18) 62%,
     transparent 72%
   );
-  animation: crystal-flash 220ms ease-out both;
+  animation: crystal-flash 300ms ease-out both;
 }
 @keyframes crystal-flash {
   0% { transform: scale(0.5); opacity: 1; }
-  35% { transform: scale(1.2); opacity: 1; }
+  30% { transform: scale(1.3); opacity: 1; }
   100% { transform: scale(0); opacity: 0; }
 }
-/* energy wave: ~15 px → ~85 px, fading, in ~420 ms */
+/* energy wave: ~20 px → ~130 px, fading, in ~520 ms */
 .crystal-wave {
   position: absolute;
   left: -50px;
@@ -900,11 +900,11 @@ body {
   box-shadow:
     0 0 10px rgba(110, 160, 255, 0.55),
     inset 0 0 8px rgba(180, 140, 255, 0.35);
-  animation: crystal-wave 420ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation: crystal-wave 520ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 @keyframes crystal-wave {
-  from { transform: scale(0.15); opacity: 0.9; }
-  to { transform: scale(0.85); opacity: 0; }
+  from { transform: scale(0.2); opacity: 0.9; }
+  to { transform: scale(1.3); opacity: 0; }
 }
 /* particles: all random values arrive as CSS variables fixed at creation */
 .crystal-p {
@@ -914,7 +914,8 @@ body {
   width: var(--size);
   height: var(--size);
   color: var(--c);
-  animation: crystal-particle var(--dur) cubic-bezier(0.18, 0.75, 0.3, 1) var(--delay) both;
+  /* easing lives in the keyframes: a fast outward burst, then a slow drift and fade */
+  animation: crystal-particle var(--dur) linear var(--delay) both;
   will-change: transform, opacity;
 }
 .crystal-p svg {
@@ -933,17 +934,18 @@ body {
   filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 7px var(--glow));
   animation-name: crystal-feature;
 }
+/* burst: out to ~60% of the travel in the first tenth, then drift the rest while fading slowly */
 @keyframes crystal-particle {
-  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r0)) scale(0.2); }
-  14% { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.12), calc(-50% + var(--dy) * 0.12)) rotate(var(--r0)) scale(1); }
-  60% { opacity: 1; }
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r0)) scale(0.2); animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1); }
+  10% { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.6), calc(-50% + var(--dy) * 0.6)) rotate(var(--r0)) scale(1); animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1); }
+  30% { opacity: 1; animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); }
   100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--r1)) scale(var(--s1)); }
 }
 @keyframes crystal-feature {
-  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r0)) scale(0.2); }
-  18% { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.15), calc(-50% + var(--dy) * 0.15)) rotate(var(--r0)) scale(1.3); }
-  38% { transform: translate(calc(-50% + var(--dx) * 0.4), calc(-50% + var(--dy) * 0.4)) rotate(var(--r0)) scale(1); }
-  65% { opacity: 1; }
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r0)) scale(0.2); animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1); }
+  12% { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.5), calc(-50% + var(--dy) * 0.5)) rotate(var(--r0)) scale(1.35); animation-timing-function: cubic-bezier(0.3, 0.6, 0.5, 1); }
+  28% { transform: translate(calc(-50% + var(--dx) * 0.7), calc(-50% + var(--dy) * 0.7)) rotate(var(--r0)) scale(1); animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1); }
+  40% { opacity: 1; animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); }
   100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--r1)) scale(var(--s1)); }
 }
 

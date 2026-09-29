@@ -7,6 +7,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 Nothing yet.
 
+## 2026-09-28 — `feature/ice-magic-burst`
+
+### Ice-magic tap: twice the stars, burst + slow fade, ping + shimmer sound
+
+#### Changed
+- **Twice as many stars** in the touch burst: 32–80 small (was 16–40), 6–10 medium (was 3–5),
+  2–4 large feature stars (was 1–2); they travel a little further.
+- **Burst, then a slow fade:** particles shoot out to ~60% of their travel in the first tenth of
+  their life, then drift and fade slowly; the whole burst lasts ~2.4 s (was ~1 s). Slightly
+  bigger contact flash and energy ring. Reduced motion unchanged.
+- **New tap sound:** one soft glassy ping followed by a glittery shimmer that fades with the stars
+  (~2.4 s, 5 variations), replacing the bell-like chime. Regenerated with a rewritten
+  `scripts/generate_ice_tap.py` (still fully synthetic and original).
+
 ## 2026-09-27 — `feature/subitem-rotate`
 
 ### `63c7386` Demo fixes, smooth ring glides, calm tap glide, more stars
