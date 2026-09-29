@@ -98,6 +98,18 @@ export function setChimeMuted(value: boolean) {
   listeners.forEach((fn) => fn());
 }
 
+// Keep every window in step: muting on the touchscreen also mutes the display windows (and back).
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== MUTE_KEY) return;
+    const value = e.newValue === '1';
+    if (muted === value) return;
+    muted = value;
+    if (muted) stopCurrent();
+    listeners.forEach((fn) => fn());
+  });
+}
+
 /** For useSyncExternalStore. */
 export function subscribeChimeMuted(fn: () => void): () => void {
   listeners.add(fn);

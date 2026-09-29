@@ -9,6 +9,21 @@ Nothing yet.
 
 ## 2026-09-28 — `feature/ice-magic-burst`
 
+### Display windows: tray, stars + sound, visible cursor
+
+#### Added
+- **Tray on the external screens:** a newer image thrown to a display no longer replaces the one
+  shown there; the earlier one shrinks into a tray of thumbnails at the bottom right (like the
+  touchscreen's, max 5, oldest leave first). Tap a thumbnail to bring it back full screen; an
+  image thrown again comes out of the tray instead of showing twice (`displays/displayShelf.ts`,
+  tested in `tests/displayShelf.test.ts`).
+- **Stars and sound on the displays:** touches/clicks there get the same crystalline burst, taps
+  the same ping + shimmer. Muting on the touchscreen mutes the displays too, live.
+
+#### Fixed
+- **Cursor vanished on the display in full screen:** it now stays visible while the mouse is
+  used and only hides after ~3 s without moving (back on any move).
+
 ### Ice-magic tap: twice the stars, burst + slow fade, ping + shimmer sound
 
 #### Changed

@@ -89,7 +89,7 @@ src/
                             placeholder images), chime (audio), pointerRegistry
   displays/                 controller ↔ display link (BroadcastChannel), Window Management API,
                             throw maths
-  display/DisplayApp.tsx    external-screen window (full-screen image)
+  display/DisplayApp.tsx    external-screen window (full-screen image + tray; displays/displayShelf)
   tests/                    vitest unit tests (pure utils + store)
 ```
 
@@ -116,7 +116,8 @@ Key mechanics:
 - Submenu = main menu at 84%, outer circles never overlap, longer bridge.
 - Images: tap sub item → image; earlier images go to the tray (max 5); zoom max 50% width,
   between top-right controls and tray; closing a submenu keeps images.
-- Throw images to external screens (full screen there).
+- Throw images to external screens (full screen there); earlier ones go to a tray there (max 5, tap
+  to bring back). Displays get the same burst + tap sound; mouse cursor hides only after ~3 s still.
 - Idle demo after 8–12 s idle (2 s after load): ring glide → pulse random item 2× outward → preview
   **that same item's** submenu (ring holds still meanwhile) → repeat; any input stops it (a glide in
   progress settles quickly at its slot). **Silent.**

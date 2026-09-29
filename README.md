@@ -95,7 +95,8 @@ History: [CHANGELOG.md](CHANGELOG.md) · Agent/maintainer brief (context, decisi
 The laptop page is the **controller**; each external screen runs a **display** window
 (`http://localhost:5173/?view=display`). Flick an image card toward a screen and it flies off the
 laptop and appears on that screen, **full screen, edge to edge**, arriving from the side facing the
-laptop. A newer throw replaces the image shown there.
+laptop. A newer throw moves the image shown there into a tray of thumbnails at the bottom right
+(max 5); tap a thumbnail to bring it back full screen. Touches there get the same stars and sound.
 
 Setup (once per session):
 
